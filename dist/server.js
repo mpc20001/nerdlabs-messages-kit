@@ -1,4 +1,4 @@
-import { MAX_EMAIL_LENGTH, MAX_BODY_LENGTH, MAX_NOTE_LENGTH, resolveLocale } from './shared-chunk.js';
+import { MAX_EMAIL_LENGTH, resolveLocale, MAX_BODY_LENGTH, MAX_NOTE_LENGTH } from './shared-chunk.js';
 export { SUPPORTED_LOCALES, messagesNavLabel, resolveLocale, t } from './shared-chunk.js';
 import { json } from '@remix-run/node';
 
@@ -264,7 +264,7 @@ function queryLocale(request) {
     return null;
   }
 }
-async function localeFor(options, request, session, postedLocale) {
+async function explicitLocaleFor(options, request, session, postedLocale) {
   if (options.getLocale) {
     try {
       const fromApp = await options.getLocale(request, session);
@@ -274,7 +274,8 @@ async function localeFor(options, request, session, postedLocale) {
     }
   }
   if (postedLocale) return resolveLocale(postedLocale);
-  return resolveLocale(queryLocale(request));
+  const fromQuery = queryLocale(request);
+  return fromQuery ? resolveLocale(fromQuery) : void 0;
 }
 function field(form, name) {
   const value = form?.get(name);
@@ -301,7 +302,8 @@ function messagesRoute(options) {
   async function loader({ request }) {
     const { admin, session } = await options.authenticate(request);
     if (!isMessagesEnabled()) return json({ enabled: false });
-    const locale = await localeFor(options, request, session);
+    const explicit = await explicitLocaleFor(options, request, session);
+    const locale = explicit ?? resolveLocale(null);
     try {
       const client = getClient();
       const [thread, contact] = await Promise.all([client.getThread(session.shop), shopContact(admin)]);
@@ -317,6 +319,7 @@ function messagesRoute(options) {
         unread: thread.unread,
         contact,
         locale,
+        localeExplicit: explicit !== void 0,
         app: options.app
       });
     } catch (error) {
@@ -356,7 +359,7 @@ function messagesRoute(options) {
       }
       if (!merchantEmail) return fail("error.emailRequired", 400);
       if (!isValidEmail(merchantEmail)) return fail("error.emailInvalid", 400);
-      const locale = await localeFor(options, request, session, field(form, "locale"));
+      const locale = await explicitLocaleFor(options, request, session, field(form, "locale"));
       await getClient().postMessage({
         shop: session.shop,
         body,

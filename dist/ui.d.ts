@@ -1,5 +1,5 @@
 import * as react from 'react';
-export { A as Author, C as Conversation, c as ConversationKind, d as ConversationStatus, e as Message, f as MessageKey, b as MessagesActionData, g as MessagesIntent, M as MessagesLoaderData, P as PostMessageInput, a as PostMessageResult, h as SUPPORTED_LOCALES, j as SUPPORT_EMAIL, S as ShopContact, i as SupportedLocale, T as Thread, k as TranslationVars, l as errorMessage, n as isMessageKey, m as messagesNavLabel, r as resolveLocale, t } from './index-vVc1LihO.js';
+export { A as Author, C as Conversation, c as ConversationKind, d as ConversationStatus, e as Message, f as MessageKey, b as MessagesActionData, g as MessagesIntent, M as MessagesLoaderData, P as PostMessageInput, a as PostMessageResult, h as SUPPORTED_LOCALES, j as SUPPORT_EMAIL, S as ShopContact, i as SupportedLocale, T as Thread, k as TranslationVars, l as errorMessage, n as isMessageKey, m as messagesNavLabel, r as resolveLocale, t } from './index-BwbQQSRq.js';
 
 type MessagesPageProps = {
     /** Overrides the locale from loader data. */

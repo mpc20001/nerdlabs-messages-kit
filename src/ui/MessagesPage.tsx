@@ -113,10 +113,12 @@ function Thread({ messages, locale }: { messages: Message[]; locale: string }) {
 
 function Composer({
   locale,
+  localeExplicit,
   defaultEmail,
   actionPath,
 }: {
   locale: string;
+  localeExplicit: boolean;
   defaultEmail: string;
   actionPath: string | undefined;
 }) {
@@ -160,10 +162,12 @@ function Composer({
     if (errors.body || errors.email) return;
     fetcher.submit(
       // `locale` lets the action localize system mail even when the app has no getLocale.
-      { intent: "send", body: trimmedBody, merchantEmail: trimmedEmail, locale },
+      // `locale` only when real: the "en" display default must not overwrite
+      // the merchant's stored locale on the service.
+      { intent: "send", body: trimmedBody, merchantEmail: trimmedEmail, ...(localeExplicit ? { locale } : {}) },
       { method: "post", ...(actionPath ? { action: actionPath } : {}) },
     );
-  }, [body, email, locale, actionPath, fetcher]);
+  }, [body, email, locale, localeExplicit, actionPath, fetcher]);
 
   return (
     <Card>
@@ -261,7 +265,12 @@ export function MessagesPage({ locale: localeProp, actionPath }: MessagesPagePro
             <Thread messages={data.messages} locale={locale} />
           </BlockStack>
         </Card>
-        <Composer locale={locale} defaultEmail={data.contact.email} actionPath={actionPath} />
+        <Composer
+          locale={locale}
+          localeExplicit={Boolean(localeProp) || data.localeExplicit === true}
+          defaultEmail={data.contact.email}
+          actionPath={actionPath}
+        />
       </BlockStack>
     </Page>
   );

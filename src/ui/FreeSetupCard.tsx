@@ -91,7 +91,8 @@ export function FreeSetupCard({
     }
     setError(null);
     fetcher.submit(
-      { intent: "setup", body: trimmedNote, merchantEmail: email.trim(), locale },
+      // Only a locale the app actually passed (not the "en" display default).
+      { intent: "setup", body: trimmedNote, merchantEmail: email.trim(), ...(localeProp ? { locale } : {}) },
       { method: "post", action: actionPath },
     );
   };

@@ -57,6 +57,8 @@ export type MessagesLoaderData =
       unread: number;
       contact: ShopContact;
       locale: string;
+      /** True when the locale came from a real source (not the "en" default). */
+      localeExplicit?: boolean;
       app: string;
     };
 

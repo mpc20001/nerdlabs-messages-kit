@@ -152,7 +152,8 @@ describe("action", () => {
   it.each([
     ["posted field beats the query param", undefined, "ja", "?locale=de", "ja"],
     ["query param when nothing is posted", undefined, "", "?locale=de-CH", "de"],
-    ["en when there is nothing", undefined, "", "", "en"],
+    // Nothing known → omitted, so the service keeps the merchant's stored locale.
+    ["omitted when there is nothing", undefined, "", "", undefined],
     ["getLocale beats the posted field", (): string => "pl", "ja", "?locale=de", "pl"],
     ["getLocale returning null falls through to posted", (): null => null, "pt", "", "pt-BR"],
     [
@@ -273,4 +274,28 @@ describe("action", () => {
     const res = await route.action({ request: post({ intent: "send", body: "hi", merchantEmail: "a@b.co" }) });
     expect(await body<MessagesActionData>(res)).toEqual({ ok: true, intent: "send" });
   });
+
+  it("with no known locale, the post omits it so the service keeps the stored one", async () => {
+    const { calls } = mockFetch(() => jsonResponse(201, { conversation: thread.conversation, message: thread.messages[0] }));
+    const route = messagesRoute({ app: "X", authenticate: async () => ({ admin: adminWith({}), session: { shop: SHOP } }) });
+    await route.action({ request: post({ intent: "send", body: "hi", merchantEmail: "a@b.co" }) });
+    const sentBody = JSON.parse(String(calls.at(-1)!.init.body));
+    expect(sentBody).not.toHaveProperty("locale");
+  });
+
+  it("a posted locale is sent, and the loader marks only real locales as explicit", async () => {
+    const { calls } = mockFetch((url) =>
+      url.includes("/messages")
+        ? jsonResponse(201, { conversation: thread.conversation, message: thread.messages[0] })
+        : jsonResponse(200, { ...thread, unread: 0 }),
+    );
+    const route = messagesRoute({ app: "X", authenticate: async () => ({ admin: adminWith({}), session: { shop: SHOP } }) });
+    await route.action({ request: post({ intent: "send", body: "hi", merchantEmail: "a@b.co", locale: "de" }) });
+    expect(JSON.parse(String(calls.at(-1)!.init.body)).locale).toBe("de");
+    const plain = await body<MessagesLoaderData>(await route.loader({ request: new Request("https://app.test/app/messages") }));
+    expect("localeExplicit" in plain && plain.localeExplicit).toBe(false);
+    const withQuery = await body<MessagesLoaderData>(await route.loader({ request: new Request("https://app.test/app/messages?locale=fr") }));
+    expect("localeExplicit" in withQuery && withQuery.localeExplicit).toBe(true);
+  });
 });
+

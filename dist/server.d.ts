@@ -1,5 +1,5 @@
-import { T as Thread, P as PostMessageInput, a as PostMessageResult, S as ShopContact, M as MessagesLoaderData, b as MessagesActionData } from './index-vVc1LihO.js';
-export { A as Author, C as Conversation, c as ConversationKind, d as ConversationStatus, e as Message, f as MessageKey, g as MessagesIntent, h as SUPPORTED_LOCALES, i as SupportedLocale, m as messagesNavLabel, r as resolveLocale, t } from './index-vVc1LihO.js';
+import { T as Thread, P as PostMessageInput, a as PostMessageResult, S as ShopContact, M as MessagesLoaderData, b as MessagesActionData } from './index-BwbQQSRq.js';
+export { A as Author, C as Conversation, c as ConversationKind, d as ConversationStatus, e as Message, f as MessageKey, g as MessagesIntent, h as SUPPORTED_LOCALES, i as SupportedLocale, m as messagesNavLabel, r as resolveLocale, t } from './index-BwbQQSRq.js';
 import { TypedResponse } from '@remix-run/node';
 
 declare const DEFAULT_MESSAGES_URL = "http://127.0.0.1:3027";

@@ -69,12 +69,12 @@ function queryLocale(request: Request): string | null {
  * client-side from the page's locale) → Shopify's `?locale=` query param → "en".
  * A `getLocale` that throws or returns nothing falls through to the next source.
  */
-async function localeFor(
+async function explicitLocaleFor(
   options: MessagesRouteOptions,
   request: Request,
   session: MessagesSession,
   postedLocale?: string,
-): Promise<string> {
+): Promise<string | undefined> {
   if (options.getLocale) {
     try {
       const fromApp = await options.getLocale(request, session);
@@ -84,7 +84,8 @@ async function localeFor(
     }
   }
   if (postedLocale) return resolveLocale(postedLocale);
-  return resolveLocale(queryLocale(request));
+  const fromQuery = queryLocale(request);
+  return fromQuery ? resolveLocale(fromQuery) : undefined;
 }
 
 function field(form: FormData | null, name: string): string {
@@ -126,7 +127,8 @@ export function messagesRoute(options: MessagesRouteOptions): MessagesRoute {
   async function loader({ request }: MessagesRouteArgs): Promise<TypedResponse<MessagesLoaderData>> {
     const { admin, session } = await options.authenticate(request);
     if (!isMessagesEnabled()) return json<MessagesLoaderData>({ enabled: false });
-    const locale = await localeFor(options, request, session);
+    const explicit = await explicitLocaleFor(options, request, session);
+    const locale = explicit ?? resolveLocale(null);
 
     try {
       const client = getClient();
@@ -146,6 +148,7 @@ export function messagesRoute(options: MessagesRouteOptions): MessagesRoute {
         unread: thread.unread,
         contact,
         locale,
+        localeExplicit: explicit !== undefined,
         app: options.app,
       });
     } catch (error) {
@@ -193,7 +196,9 @@ export function messagesRoute(options: MessagesRouteOptions): MessagesRoute {
       if (!merchantEmail) return fail("error.emailRequired", 400);
       if (!isValidEmail(merchantEmail)) return fail("error.emailInvalid", 400);
 
-      const locale = await localeFor(options, request, session, field(form, "locale"));
+      // Only a locale we actually know is sent: with none, the service keeps
+      // the merchant's stored locale instead of resetting it to English.
+      const locale = await explicitLocaleFor(options, request, session, field(form, "locale"));
       await getClient().postMessage({
         shop: session.shop,
         body,

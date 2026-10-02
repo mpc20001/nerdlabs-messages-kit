@@ -104,6 +104,7 @@ function Thread({ messages, locale }) {
 }
 function Composer({
   locale,
+  localeExplicit,
   defaultEmail,
   actionPath
 }) {
@@ -144,10 +145,12 @@ function Composer({
     if (errors.body || errors.email) return;
     fetcher.submit(
       // `locale` lets the action localize system mail even when the app has no getLocale.
-      { intent: "send", body: trimmedBody, merchantEmail: trimmedEmail, locale },
+      // `locale` only when real: the "en" display default must not overwrite
+      // the merchant's stored locale on the service.
+      { intent: "send", body: trimmedBody, merchantEmail: trimmedEmail, ...localeExplicit ? { locale } : {} },
       { method: "post", ...actionPath ? { action: actionPath } : {} }
     );
-  }, [body, email, locale, actionPath, fetcher]);
+  }, [body, email, locale, localeExplicit, actionPath, fetcher]);
   return /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(
     "form",
     {
@@ -212,7 +215,15 @@ function MessagesPage({ locale: localeProp, actionPath } = {}) {
       /* @__PURE__ */ jsx(Text, { as: "p", tone: "subdued", children: t(locale, "page.subtitle", { app: data.app }) }),
       /* @__PURE__ */ jsx(Thread, { messages: data.messages, locale })
     ] }) }),
-    /* @__PURE__ */ jsx(Composer, { locale, defaultEmail: data.contact.email, actionPath })
+    /* @__PURE__ */ jsx(
+      Composer,
+      {
+        locale,
+        localeExplicit: Boolean(localeProp) || data.localeExplicit === true,
+        defaultEmail: data.contact.email,
+        actionPath
+      }
+    )
   ] }) });
 }
 function FreeSetupCard({
@@ -261,7 +272,8 @@ function FreeSetupCard({
     }
     setError(null);
     fetcher.submit(
-      { intent: "setup", body: trimmedNote, merchantEmail: email.trim(), locale },
+      // Only a locale the app actually passed (not the "en" display default).
+      { intent: "setup", body: trimmedNote, merchantEmail: email.trim(), ...localeProp ? { locale } : {} },
       { method: "post", action: actionPath }
     );
   };
