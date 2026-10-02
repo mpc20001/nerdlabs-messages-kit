@@ -76,7 +76,15 @@ function MessageBubble({ message, locale, now }) {
     /* @__PURE__ */ jsxs(Text, { as: "span", variant: "bodySm", tone: "subdued", children: [
       t(locale, AUTHOR_KEY[message.author]),
       time ? " \xB7 " : "",
-      time ? /* @__PURE__ */ jsx("time", { dateTime: message.createdAt, title: now === null ? void 0 : formatAbsolute(message.createdAt, locale), children: time }) : null
+      time ? /* @__PURE__ */ jsx(
+        "time",
+        {
+          dateTime: message.createdAt,
+          title: now === null ? void 0 : formatAbsolute(message.createdAt, locale),
+          suppressHydrationWarning: true,
+          children: time
+        }
+      ) : null
     ] }),
     /* @__PURE__ */ jsx(
       Box,

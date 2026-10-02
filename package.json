@@ -34,7 +34,7 @@
   "peerDependencies": {
     "@remix-run/node": "^2",
     "@remix-run/react": "^2",
-    "@shopify/polaris": "^12",
+    "@shopify/polaris": "^12 || ^13",
     "react": "^18"
   },
   "devDependencies": {

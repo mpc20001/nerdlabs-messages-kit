@@ -60,7 +60,14 @@ function MessageBubble({ message, locale, now }: { message: Message; locale: str
             {t(locale, AUTHOR_KEY[message.author])}
             {time ? " · " : ""}
             {time ? (
-              <time dateTime={message.createdAt} title={now === null ? undefined : formatAbsolute(message.createdAt, locale)}>
+              <time
+              dateTime={message.createdAt}
+              title={now === null ? undefined : formatAbsolute(message.createdAt, locale)}
+              // Server (Node ICU) and browser ICU can format the same instant
+              // slightly differently (e.g. U+202F before AM/PM); the text is
+              // replaced right after hydration anyway, so skip the comparison.
+              suppressHydrationWarning
+            >
                 {time}
               </time>
             ) : null}
