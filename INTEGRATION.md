@@ -173,6 +173,7 @@ import { FreeSetupCard, HelpLine } from "@nerdlabs/messages-kit/ui";
 ```
 
 - `FreeSetupCard` posts `intent=setup` to the messages action with `useFetcher`.
+- Optional `email` / `name` props (e.g. from your dashboard loader) are posted along; with an email the action makes **no** Admin API lookup. Without one it looks up the shop's contact email once.
   The reply-to email comes from the shop's `contactEmail || email`, so the card
   doesn't need an email field. If the shop has no email, the card shows an email
   field. Pass `email={…}` if the app already knows a better address.
@@ -225,7 +226,7 @@ Add one line to the app's privacy policy (landing page plus any in-app copy):
 | `@nerdlabs/messages-kit/server` | `@nerdlabs/messages-kit/ui` |
 |---|---|
 | `isMessagesEnabled()` | `<MessagesPage />` |
-| `createMessagesClient({ apiKey?, baseUrl? })` | `<FreeSetupCard enabled locale actionPath email? alreadyRequested? />` |
+| `createMessagesClient({ apiKey?, baseUrl? })` | `<FreeSetupCard enabled locale actionPath email? name? alreadyRequested? />` |
 | `unreadCountForShop(shop)`, `threadSummaryForShop(shop)` | `<HelpLine enabled locale href />` |
 | `redactShop(shop)` | `messagesNavLabel(locale, unread)` |
 | `shopContact(admin)` | `t(locale, key, vars?)` |

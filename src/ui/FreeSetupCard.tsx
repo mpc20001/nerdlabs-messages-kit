@@ -22,6 +22,8 @@ export type FreeSetupCardProps = {
   messagesHref?: string;
   /** Reply-to email. Optional: the action falls back to the shop's contact email. */
   email?: string | null;
+  /** Merchant name (e.g. from the dashboard loader). Optional; saves the action a lookup when email is also given. */
+  name?: string | null;
   /**
    * The shop already has an open setup request (from `threadSummaryForShop(shop)?.setupOpen`).
    * Renders the "Requested!" state instead of the form.
@@ -36,6 +38,7 @@ export function FreeSetupCard({
   actionPath = "/app/messages",
   messagesHref,
   email: emailProp,
+  name: nameProp,
   alreadyRequested = false,
 }: FreeSetupCardProps) {
   const locale = resolveLocale(localeProp);
@@ -92,7 +95,13 @@ export function FreeSetupCard({
     setError(null);
     fetcher.submit(
       // Only a locale the app actually passed (not the "en" display default).
-      { intent: "setup", body: trimmedNote, merchantEmail: email.trim(), ...(localeProp ? { locale } : {}) },
+      {
+        intent: "setup",
+        body: trimmedNote,
+        merchantEmail: email.trim(),
+        ...(nameProp ? { merchantName: nameProp } : {}),
+        ...(localeProp ? { locale } : {}),
+      },
       { method: "post", action: actionPath },
     );
   };

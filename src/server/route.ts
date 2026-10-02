@@ -188,9 +188,12 @@ export function messagesRoute(options: MessagesRouteOptions): MessagesRoute {
 
       let merchantEmail = field(form, "merchantEmail");
       let merchantName = field(form, "merchantName");
-      if (!merchantEmail || !merchantName) {
+      // The UI posts the contact the loader already fetched, so the common
+      // Send costs no Admin API call. Only a missing EMAIL (required) falls
+      // back to a lookup — never the optional name on its own.
+      if (!merchantEmail) {
         const contact: ShopContact = await shopContact(admin);
-        merchantEmail ||= contact.email;
+        merchantEmail = contact.email;
         merchantName ||= contact.name;
       }
       if (!merchantEmail) return fail("error.emailRequired", 400);

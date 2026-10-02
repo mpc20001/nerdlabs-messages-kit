@@ -297,5 +297,22 @@ describe("action", () => {
     const withQuery = await body<MessagesLoaderData>(await route.loader({ request: new Request("https://app.test/app/messages?locale=fr") }));
     expect("localeExplicit" in withQuery && withQuery.localeExplicit).toBe(true);
   });
+
+  it("a Send with the email the page already has makes no Admin API call", async () => {
+    mockFetch(() => jsonResponse(201, { conversation: thread.conversation, message: thread.messages[0] }));
+    const { route, admin } = setup();
+    const res = await route.action({
+      request: post({ intent: "send", body: "hi", merchantEmail: "a@b.co", merchantName: "Ann" }),
+    });
+    expect(await body<MessagesActionData>(res)).toEqual({ ok: true, intent: "send" });
+    expect(admin.graphql).not.toHaveBeenCalled();
+  });
+
+  it("a Send without a name still doesn't look one up when the email is there", async () => {
+    mockFetch(() => jsonResponse(201, { conversation: thread.conversation, message: thread.messages[0] }));
+    const { route, admin } = setup();
+    await route.action({ request: post({ intent: "send", body: "hi", merchantEmail: "a@b.co" }) });
+    expect(admin.graphql).not.toHaveBeenCalled();
+  });
 });
 

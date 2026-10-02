@@ -352,9 +352,9 @@ function messagesRoute(options) {
       }
       let merchantEmail = field(form, "merchantEmail");
       let merchantName = field(form, "merchantName");
-      if (!merchantEmail || !merchantName) {
+      if (!merchantEmail) {
         const contact = await shopContact(admin);
-        merchantEmail ||= contact.email;
+        merchantEmail = contact.email;
         merchantName ||= contact.name;
       }
       if (!merchantEmail) return fail("error.emailRequired", 400);

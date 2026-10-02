@@ -114,6 +114,7 @@ function Composer({
   locale,
   localeExplicit,
   defaultEmail,
+  merchantName,
   actionPath
 }) {
   const fetcher = useFetcher();
@@ -155,10 +156,16 @@ function Composer({
       // `locale` lets the action localize system mail even when the app has no getLocale.
       // `locale` only when real: the "en" display default must not overwrite
       // the merchant's stored locale on the service.
-      { intent: "send", body: trimmedBody, merchantEmail: trimmedEmail, ...localeExplicit ? { locale } : {} },
+      {
+        intent: "send",
+        body: trimmedBody,
+        merchantEmail: trimmedEmail,
+        ...merchantName ? { merchantName } : {},
+        ...localeExplicit ? { locale } : {}
+      },
       { method: "post", ...actionPath ? { action: actionPath } : {} }
     );
-  }, [body, email, locale, localeExplicit, actionPath, fetcher]);
+  }, [body, email, locale, localeExplicit, merchantName, actionPath, fetcher]);
   return /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(
     "form",
     {
@@ -229,6 +236,7 @@ function MessagesPage({ locale: localeProp, actionPath } = {}) {
         locale,
         localeExplicit: Boolean(localeProp) || data.localeExplicit === true,
         defaultEmail: data.contact.email,
+        merchantName: data.contact.name,
         actionPath
       }
     )
@@ -240,6 +248,7 @@ function FreeSetupCard({
   actionPath = "/app/messages",
   messagesHref,
   email: emailProp,
+  name: nameProp,
   alreadyRequested = false
 }) {
   const locale = resolveLocale(localeProp);
@@ -281,7 +290,13 @@ function FreeSetupCard({
     setError(null);
     fetcher.submit(
       // Only a locale the app actually passed (not the "en" display default).
-      { intent: "setup", body: trimmedNote, merchantEmail: email.trim(), ...localeProp ? { locale } : {} },
+      {
+        intent: "setup",
+        body: trimmedNote,
+        merchantEmail: email.trim(),
+        ...nameProp ? { merchantName: nameProp } : {},
+        ...localeProp ? { locale } : {}
+      },
       { method: "post", action: actionPath }
     );
   };

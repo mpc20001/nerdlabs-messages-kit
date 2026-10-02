@@ -122,11 +122,14 @@ function Composer({
   locale,
   localeExplicit,
   defaultEmail,
+  merchantName,
   actionPath,
 }: {
   locale: string;
   localeExplicit: boolean;
   defaultEmail: string;
+  /** From the loader's shopContact: posted so Send needs no second lookup. */
+  merchantName: string;
   actionPath: string | undefined;
 }) {
   const fetcher = useFetcher<MessagesActionData>();
@@ -171,10 +174,16 @@ function Composer({
       // `locale` lets the action localize system mail even when the app has no getLocale.
       // `locale` only when real: the "en" display default must not overwrite
       // the merchant's stored locale on the service.
-      { intent: "send", body: trimmedBody, merchantEmail: trimmedEmail, ...(localeExplicit ? { locale } : {}) },
+      {
+        intent: "send",
+        body: trimmedBody,
+        merchantEmail: trimmedEmail,
+        ...(merchantName ? { merchantName } : {}),
+        ...(localeExplicit ? { locale } : {}),
+      },
       { method: "post", ...(actionPath ? { action: actionPath } : {}) },
     );
-  }, [body, email, locale, localeExplicit, actionPath, fetcher]);
+  }, [body, email, locale, localeExplicit, merchantName, actionPath, fetcher]);
 
   return (
     <Card>
@@ -276,6 +285,7 @@ export function MessagesPage({ locale: localeProp, actionPath }: MessagesPagePro
           locale={locale}
           localeExplicit={Boolean(localeProp) || data.localeExplicit === true}
           defaultEmail={data.contact.email}
+          merchantName={data.contact.name}
           actionPath={actionPath}
         />
       </BlockStack>
