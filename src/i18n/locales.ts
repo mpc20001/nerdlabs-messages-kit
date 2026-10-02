@@ -10,7 +10,7 @@ export const cs: Dictionary = {
   "nav.messagesWithCount": "Zprávy ({count})",
   "page.title": "Zprávy",
   "page.subtitle":
-    "Máte dotaz k aplikaci {app}? Napište týmu Nerd Labs — odpovídáme tady i e-mailem, obvykle do 1 pracovního dne.",
+    "Máte dotaz k aplikaci {app}? Napište týmu Nerd Labs — odpovídáme tady i e-mailem, obvykle během několika hodin.",
   "page.empty": "Zatím tu nejsou žádné zprávy. Zeptejte se na cokoli — každou zprávu čte skutečný člověk.",
   "author.you": "Vy",
   "author.admin": "Joren z Nerd Labs",
@@ -46,7 +46,7 @@ export const da: Dictionary = {
   "nav.messagesWithCount": "Beskeder ({count})",
   "page.title": "Beskeder",
   "page.subtitle":
-    "Spørgsmål om {app}? Skriv til Nerd Labs-teamet — vi svarer her og på e-mail, som regel inden for 1 hverdag.",
+    "Spørgsmål om {app}? Skriv til Nerd Labs-teamet — vi svarer her og på e-mail, som regel inden for få timer.",
   "page.empty": "Ingen beskeder endnu. Spørg os om hvad som helst — et rigtigt menneske læser hver besked.",
   "author.you": "Dig",
   "author.admin": "Joren fra Nerd Labs",
@@ -82,7 +82,7 @@ export const de: Dictionary = {
   "nav.messagesWithCount": "Nachrichten ({count})",
   "page.title": "Nachrichten",
   "page.subtitle":
-    "Fragen zu {app}? Schreib dem Nerd Labs-Team — wir antworten hier und per E-Mail, meist innerhalb von 1 Werktag.",
+    "Fragen zu {app}? Schreib dem Nerd Labs-Team — wir antworten hier und per E-Mail, meist innerhalb weniger Stunden.",
   "page.empty": "Noch keine Nachrichten. Frag uns alles — jede Nachricht liest ein echter Mensch.",
   "author.you": "Du",
   "author.admin": "Joren von Nerd Labs",
@@ -119,7 +119,7 @@ export const es: Dictionary = {
   "nav.messagesWithCount": "Mensajes ({count})",
   "page.title": "Mensajes",
   "page.subtitle":
-    "¿Preguntas sobre {app}? Escribe al equipo de Nerd Labs: respondemos aquí y por correo, normalmente en 1 día hábil.",
+    "¿Preguntas sobre {app}? Escribe al equipo de Nerd Labs: respondemos aquí y por correo, normalmente en pocas horas.",
   "page.empty": "Aún no hay mensajes. Pregúntanos lo que quieras: una persona real lee cada mensaje.",
   "author.you": "Tú",
   "author.admin": "Joren de Nerd Labs",
@@ -155,7 +155,7 @@ export const fi: Dictionary = {
   "nav.messagesWithCount": "Viestit ({count})",
   "page.title": "Viestit",
   "page.subtitle":
-    "Kysyttävää sovelluksesta {app}? Lähetä viesti Nerd Labs -tiimille — vastaamme täällä ja sähköpostitse, yleensä 1 arkipäivän kuluessa.",
+    "Kysyttävää sovelluksesta {app}? Lähetä viesti Nerd Labs -tiimille — vastaamme täällä ja sähköpostitse, yleensä muutamassa tunnissa.",
   "page.empty": "Ei vielä viestejä. Kysy meiltä mitä tahansa — oikea ihminen lukee jokaisen viestin.",
   "author.you": "Sinä",
   "author.admin": "Joren, Nerd Labs",
@@ -191,7 +191,7 @@ export const fr: Dictionary = {
   "nav.messagesWithCount": "Messages ({count})",
   "page.title": "Messages",
   "page.subtitle":
-    "Des questions sur {app} ? Écrivez à l’équipe Nerd Labs — nous répondons ici et par e-mail, généralement sous 1 jour ouvré.",
+    "Des questions sur {app} ? Écrivez à l’équipe Nerd Labs — nous répondons ici et par e-mail, généralement en quelques heures.",
   "page.empty": "Aucun message pour l’instant. Posez-nous n’importe quelle question — chaque message est lu par une vraie personne.",
   "author.you": "Vous",
   "author.admin": "Joren de Nerd Labs",
@@ -228,7 +228,7 @@ export const it: Dictionary = {
   "nav.messagesWithCount": "Messaggi ({count})",
   "page.title": "Messaggi",
   "page.subtitle":
-    "Domande su {app}? Scrivi al team di Nerd Labs: rispondiamo qui e via email, di solito entro 1 giorno lavorativo.",
+    "Domande su {app}? Scrivi al team di Nerd Labs: rispondiamo qui e via email, di solito entro poche ore.",
   "page.empty": "Ancora nessun messaggio. Chiedici qualsiasi cosa: ogni messaggio viene letto da una persona vera.",
   "author.you": "Tu",
   "author.admin": "Joren di Nerd Labs",
@@ -264,7 +264,7 @@ export const ja: Dictionary = {
   "nav.messagesWithCount": "メッセージ ({count})",
   "page.title": "メッセージ",
   "page.subtitle":
-    "{app} についてのご質問はありますか？Nerd Labs チームにメッセージをお送りください。通常 1 営業日以内に、ここおよびメールでご返信します。",
+    "{app} についてのご質問はありますか？Nerd Labs チームにメッセージをお送りください。通常数時間以内に、ここおよびメールでご返信します。",
   "page.empty": "まだメッセージはありません。何でもお気軽にご質問ください。すべてのメッセージをスタッフが直接読んでいます。",
   "author.you": "あなた",
   "author.admin": "Nerd Labs の Joren",
@@ -300,7 +300,7 @@ export const ko: Dictionary = {
   "nav.messagesWithCount": "메시지 ({count})",
   "page.title": "메시지",
   "page.subtitle":
-    "{app}에 대해 궁금한 점이 있으신가요? Nerd Labs 팀에 메시지를 보내 주세요. 보통 영업일 기준 1일 이내에 여기와 이메일로 답변드립니다.",
+    "{app}에 대해 궁금한 점이 있으신가요? Nerd Labs 팀에 메시지를 보내 주세요. 보통 몇 시간 안에 여기와 이메일로 답변드립니다.",
   "page.empty": "아직 메시지가 없습니다. 무엇이든 물어보세요. 모든 메시지는 실제 사람이 읽습니다.",
   "author.you": "나",
   "author.admin": "Nerd Labs의 Joren",
@@ -336,7 +336,7 @@ export const nb: Dictionary = {
   "nav.messagesWithCount": "Meldinger ({count})",
   "page.title": "Meldinger",
   "page.subtitle":
-    "Spørsmål om {app}? Send en melding til Nerd Labs-teamet — vi svarer her og på e-post, vanligvis innen 1 virkedag.",
+    "Spørsmål om {app}? Send en melding til Nerd Labs-teamet — vi svarer her og på e-post, vanligvis innen få timer.",
   "page.empty": "Ingen meldinger ennå. Spør oss om hva som helst — et ekte menneske leser hver melding.",
   "author.you": "Du",
   "author.admin": "Joren fra Nerd Labs",
@@ -372,7 +372,7 @@ export const nl: Dictionary = {
   "nav.messagesWithCount": "Berichten ({count})",
   "page.title": "Berichten",
   "page.subtitle":
-    "Vragen over {app}? Stuur het Nerd Labs-team een bericht — we antwoorden hier en per e-mail, meestal binnen 1 werkdag.",
+    "Vragen over {app}? Stuur het Nerd Labs-team een bericht — we antwoorden hier en per e-mail, meestal binnen een paar uur.",
   "page.empty": "Nog geen berichten. Vraag ons gerust alles — elk bericht wordt door een echt mens gelezen.",
   "author.you": "Jij",
   "author.admin": "Joren van Nerd Labs",
@@ -408,7 +408,7 @@ export const pl: Dictionary = {
   "nav.messagesWithCount": "Wiadomości ({count})",
   "page.title": "Wiadomości",
   "page.subtitle":
-    "Masz pytania dotyczące {app}? Napisz do zespołu Nerd Labs — odpowiadamy tutaj i e-mailem, zwykle w ciągu 1 dnia roboczego.",
+    "Masz pytania dotyczące {app}? Napisz do zespołu Nerd Labs — odpowiadamy tutaj i e-mailem, zwykle w ciągu kilku godzin.",
   "page.empty": "Nie ma jeszcze wiadomości. Pytaj o cokolwiek — każdą wiadomość czyta prawdziwy człowiek.",
   "author.you": "Ty",
   "author.admin": "Joren z Nerd Labs",
@@ -444,7 +444,7 @@ export const ptBR: Dictionary = {
   "nav.messagesWithCount": "Mensagens ({count})",
   "page.title": "Mensagens",
   "page.subtitle":
-    "Dúvidas sobre {app}? Mande uma mensagem para a equipe da Nerd Labs — respondemos aqui e por e-mail, geralmente em 1 dia útil.",
+    "Dúvidas sobre {app}? Mande uma mensagem para a equipe da Nerd Labs — respondemos aqui e por e-mail, geralmente em poucas horas.",
   "page.empty": "Nenhuma mensagem ainda. Pergunte o que quiser — uma pessoa de verdade lê cada mensagem.",
   "author.you": "Você",
   "author.admin": "Joren da Nerd Labs",
@@ -480,7 +480,7 @@ export const ptPT: Dictionary = {
   "nav.messagesWithCount": "Mensagens ({count})",
   "page.title": "Mensagens",
   "page.subtitle":
-    "Dúvidas sobre {app}? Envie uma mensagem à equipa da Nerd Labs — respondemos aqui e por e-mail, normalmente no prazo de 1 dia útil.",
+    "Dúvidas sobre {app}? Envie uma mensagem à equipa da Nerd Labs — respondemos aqui e por e-mail, normalmente em poucas horas.",
   "page.empty": "Ainda não há mensagens. Pergunte o que quiser — cada mensagem é lida por uma pessoa real.",
   "author.you": "Você",
   "author.admin": "Joren da Nerd Labs",
@@ -516,7 +516,7 @@ export const sv: Dictionary = {
   "nav.messagesWithCount": "Meddelanden ({count})",
   "page.title": "Meddelanden",
   "page.subtitle":
-    "Frågor om {app}? Skicka ett meddelande till Nerd Labs-teamet — vi svarar här och via e-post, oftast inom 1 arbetsdag.",
+    "Frågor om {app}? Skicka ett meddelande till Nerd Labs-teamet — vi svarar här och via e-post, oftast inom några timmar.",
   "page.empty": "Inga meddelanden än. Fråga oss vad som helst — en riktig människa läser varje meddelande.",
   "author.you": "Du",
   "author.admin": "Joren från Nerd Labs",
@@ -552,7 +552,7 @@ export const th: Dictionary = {
   "nav.messagesWithCount": "ข้อความ ({count})",
   "page.title": "ข้อความ",
   "page.subtitle":
-    "มีคำถามเกี่ยวกับ {app} ไหม? ส่งข้อความถึงทีม Nerd Labs ได้เลย เราจะตอบกลับที่นี่และทางอีเมล โดยปกติภายใน 1 วันทำการ",
+    "มีคำถามเกี่ยวกับ {app} ไหม? ส่งข้อความถึงทีม Nerd Labs ได้เลย เราจะตอบกลับที่นี่และทางอีเมล โดยปกติภายในไม่กี่ชั่วโมง",
   "page.empty": "ยังไม่มีข้อความ ถามเราได้ทุกเรื่อง ทุกข้อความมีคนจริงๆ อ่าน",
   "author.you": "คุณ",
   "author.admin": "Joren จาก Nerd Labs",
@@ -588,7 +588,7 @@ export const tr: Dictionary = {
   "nav.messagesWithCount": "Mesajlar ({count})",
   "page.title": "Mesajlar",
   "page.subtitle":
-    "{app} hakkında sorunuz mu var? Nerd Labs ekibine yazın — burada ve e-postayla, genellikle 1 iş günü içinde yanıt veriyoruz.",
+    "{app} hakkında sorunuz mu var? Nerd Labs ekibine yazın — burada ve e-postayla, genellikle birkaç saat içinde yanıt veriyoruz.",
   "page.empty": "Henüz mesaj yok. Bize her şeyi sorabilirsiniz — her mesajı gerçek bir kişi okur.",
   "author.you": "Siz",
   "author.admin": "Nerd Labs'ten Joren",
@@ -624,7 +624,7 @@ export const vi: Dictionary = {
   "nav.messagesWithCount": "Tin nhắn ({count})",
   "page.title": "Tin nhắn",
   "page.subtitle":
-    "Có câu hỏi về {app}? Hãy nhắn cho đội ngũ Nerd Labs — chúng tôi trả lời tại đây và qua email, thường trong vòng 1 ngày làm việc.",
+    "Có câu hỏi về {app}? Hãy nhắn cho đội ngũ Nerd Labs — chúng tôi trả lời tại đây và qua email, thường trong vòng vài giờ.",
   "page.empty": "Chưa có tin nhắn nào. Cứ hỏi chúng tôi bất cứ điều gì — mọi tin nhắn đều được người thật đọc.",
   "author.you": "Bạn",
   "author.admin": "Joren từ Nerd Labs",
@@ -660,7 +660,7 @@ export const zhCN: Dictionary = {
   "nav.messagesWithCount": "消息 ({count})",
   "page.title": "消息",
   "page.subtitle":
-    "对 {app} 有疑问？给 Nerd Labs 团队留言——我们会在这里并通过邮件回复，通常在 1 个工作日内。",
+    "对 {app} 有疑问？给 Nerd Labs 团队留言——我们会在这里并通过邮件回复，通常在几小时内。",
   "page.empty": "暂无消息。有任何问题都可以问我们——每条消息都由真人阅读。",
   "author.you": "你",
   "author.admin": "Nerd Labs 的 Joren",
@@ -695,7 +695,7 @@ export const zhTW: Dictionary = {
   "nav.messagesWithCount": "訊息 ({count})",
   "page.title": "訊息",
   "page.subtitle":
-    "對 {app} 有疑問嗎？傳訊息給 Nerd Labs 團隊——我們會在這裡並透過電子郵件回覆，通常在 1 個工作天內。",
+    "對 {app} 有疑問嗎？傳訊息給 Nerd Labs 團隊——我們會在這裡並透過電子郵件回覆，通常在幾小時內。",
   "page.empty": "目前還沒有訊息。有任何問題都歡迎詢問——每則訊息都由真人閱讀。",
   "author.you": "你",
   "author.admin": "Nerd Labs 的 Joren",
