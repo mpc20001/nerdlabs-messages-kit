@@ -29,8 +29,9 @@ export type MessagesRouteOptions = {
    */
   authenticate: (request: Request) => Promise<MessagesAuthResult>;
   /**
-   * Merchant locale. Defaults to the `locale` query param Shopify Admin adds
-   * to embedded-app URLs, else "en".
+   * Merchant locale — strongly recommended (return the app's stored admin
+   * locale). Without it: the kit UI's posted locale (actions only), then the
+   * `?locale=` query param Shopify adds on first load, then "en".
    */
   getLocale?: (request: Request, session: MessagesSession) => string | null | undefined | Promise<string | null | undefined>;
   /**
@@ -54,26 +55,36 @@ export function isValidEmail(value: string): boolean {
   return value.length <= MAX_EMAIL_LENGTH && EMAIL_PATTERN.test(value);
 }
 
-function defaultLocale(request: Request): string {
+function queryLocale(request: Request): string | null {
   try {
-    return new URL(request.url).searchParams.get("locale") ?? "en";
+    return new URL(request.url).searchParams.get("locale");
   } catch {
-    return "en";
+    return null;
   }
 }
 
+/**
+ * Locale precedence: the app's `getLocale` (authoritative — e.g. its stashed
+ * admin locale) → the `locale` field the kit's UI posts (already resolved
+ * client-side from the page's locale) → Shopify's `?locale=` query param → "en".
+ * A `getLocale` that throws or returns nothing falls through to the next source.
+ */
 async function localeFor(
   options: MessagesRouteOptions,
   request: Request,
   session: MessagesSession,
+  postedLocale?: string,
 ): Promise<string> {
-  try {
-    const raw = options.getLocale ? await options.getLocale(request, session) : defaultLocale(request);
-    return resolveLocale(raw);
-  } catch (error) {
-    console.error("[nerdlabs-messages] getLocale failed, using en:", error);
-    return "en";
+  if (options.getLocale) {
+    try {
+      const fromApp = await options.getLocale(request, session);
+      if (typeof fromApp === "string" && fromApp.trim()) return resolveLocale(fromApp);
+    } catch (error) {
+      console.error("[nerdlabs-messages] getLocale failed, falling back:", error);
+    }
   }
+  if (postedLocale) return resolveLocale(postedLocale);
+  return resolveLocale(queryLocale(request));
 }
 
 function field(form: FormData | null, name: string): string {
@@ -182,7 +193,7 @@ export function messagesRoute(options: MessagesRouteOptions): MessagesRoute {
       if (!merchantEmail) return fail("error.emailRequired", 400);
       if (!isValidEmail(merchantEmail)) return fail("error.emailInvalid", 400);
 
-      const locale = await localeFor(options, request, session);
+      const locale = await localeFor(options, request, session, field(form, "locale"));
       await getClient().postMessage({
         shop: session.shop,
         body,

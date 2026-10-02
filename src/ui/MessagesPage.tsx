@@ -16,6 +16,7 @@ import {
   errorMessage,
   isMessageKey,
   MAX_BODY_LENGTH,
+  resolveLocale,
   MAX_EMAIL_LENGTH,
   SUPPORT_EMAIL,
   t,
@@ -158,10 +159,11 @@ function Composer({
     setSent(false);
     if (errors.body || errors.email) return;
     fetcher.submit(
-      { intent: "send", body: trimmedBody, merchantEmail: trimmedEmail },
+      // `locale` lets the action localize system mail even when the app has no getLocale.
+      { intent: "send", body: trimmedBody, merchantEmail: trimmedEmail, locale },
       { method: "post", ...(actionPath ? { action: actionPath } : {}) },
     );
-  }, [body, email, actionPath, fetcher]);
+  }, [body, email, locale, actionPath, fetcher]);
 
   return (
     <Card>
@@ -229,7 +231,7 @@ function Composer({
 export function MessagesPage({ locale: localeProp, actionPath }: MessagesPageProps = {}) {
   const data = useLoaderData() as unknown as MessagesLoaderData | null | undefined;
   if (!data || !data.enabled) return null;
-  const locale = localeProp ?? data.locale;
+  const locale = resolveLocale(localeProp ?? data.locale);
 
   if (data.unavailable) {
     return (

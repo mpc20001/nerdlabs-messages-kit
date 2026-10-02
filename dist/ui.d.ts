@@ -23,9 +23,14 @@ type FreeSetupCardProps = {
     messagesHref?: string;
     /** Reply-to email. Optional: the action falls back to the shop's contact email. */
     email?: string | null;
+    /**
+     * The shop already has an open setup request (from `threadSummaryForShop(shop)?.setupOpen`).
+     * Renders the "Requested!" state instead of the form.
+     */
+    alreadyRequested?: boolean;
 };
 /** Dashboard card offering free done-for-you setup. Posts `intent=setup` to the messages action. */
-declare function FreeSetupCard({ enabled, locale, actionPath, messagesHref, email: emailProp, }: FreeSetupCardProps): react.JSX.Element | null;
+declare function FreeSetupCard({ enabled, locale: localeProp, actionPath, messagesHref, email: emailProp, alreadyRequested, }: FreeSetupCardProps): react.JSX.Element | null;
 
 type HelpLineProps = {
     /** Pass the loader's `messagesEnabled: isMessagesEnabled()`. Renders nothing when false. */

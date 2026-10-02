@@ -5,6 +5,8 @@ import {
   MessagesRequestError,
   MessagesUnavailableError,
   redactShop,
+  resetMessagesCircuitBreaker,
+  threadSummaryForShop,
   unreadCountForShop,
 } from "../src/server/index.js";
 import { jsonResponse, mockFetch, thread } from "./helpers.js";
@@ -12,6 +14,7 @@ import { jsonResponse, mockFetch, thread } from "./helpers.js";
 const SHOP = "demo-store.myshopify.com";
 
 beforeEach(() => {
+  resetMessagesCircuitBreaker();
   vi.stubEnv("NERDLABS_MESSAGES_KEY", "test-key");
   vi.stubEnv("NERDLABS_MESSAGES_URL", "");
 });
@@ -19,6 +22,7 @@ afterEach(() => {
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 describe("isMessagesEnabled", () => {
@@ -110,6 +114,30 @@ describe("createMessagesClient", () => {
     expect(calls[1]!.url).toBe(`http://127.0.0.1:3027/admin/api/v1/thread?shop=${encodeURIComponent(SHOP)}`);
   });
 
+  it("treats a missing/invalid unread or deleted count as malformed (unavailable)", async () => {
+    mockFetch(() => jsonResponse(200, { conversation: null, messages: [] }));
+    await expect(createMessagesClient().getThread(SHOP)).rejects.toBeInstanceOf(MessagesUnavailableError);
+    mockFetch(() => jsonResponse(200, { conversation: null, messages: [], unread: -1 }));
+    await expect(createMessagesClient().getThread(SHOP)).rejects.toBeInstanceOf(MessagesUnavailableError);
+    mockFetch(() => jsonResponse(200, {}));
+    await expect(createMessagesClient().deleteThread(SHOP)).rejects.toBeInstanceOf(MessagesUnavailableError);
+    mockFetch(() => jsonResponse(200, { deleted: "3" }));
+    await expect(createMessagesClient().deleteThread(SHOP)).rejects.toBeInstanceOf(MessagesUnavailableError);
+  });
+
+  it("uses an 8s timeout for postMessage and 3s for everything else", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    mockFetch((url) =>
+      url.endsWith("/messages")
+        ? jsonResponse(201, { conversation: thread.conversation, message: thread.messages[0] })
+        : jsonResponse(200, { unread: 0 }),
+    );
+    const client = createMessagesClient();
+    await client.postMessage({ shop: SHOP, body: "x", merchantEmail: "a@b.co" });
+    await client.getUnread(SHOP);
+    expect(timeout.mock.calls.map((c) => c[0])).toEqual([8000, 3000]);
+  });
+
   it("maps 4xx to MessagesRequestError with status and code", async () => {
     mockFetch(() => jsonResponse(429, { error: "rate_limited" }));
     const error = await createMessagesClient()
@@ -165,14 +193,80 @@ describe("unreadCountForShop", () => {
     expect(fn).not.toHaveBeenCalled();
   });
 
-  it("returns the count, or null on any error", async () => {
+  it("returns the count with a 1s timeout", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout");
     mockFetch(() => jsonResponse(200, { unread: 2 }));
     expect(await unreadCountForShop(SHOP)).toBe(2);
+    expect(timeout).toHaveBeenCalledWith(1000);
+  });
+
+  it("returns null on 4xx without tripping the breaker", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
-    mockFetch(() => jsonResponse(500, {}));
-    expect(await unreadCountForShop(SHOP)).toBeNull();
     mockFetch(() => jsonResponse(401, { error: "unauthorized" }));
     expect(await unreadCountForShop(SHOP)).toBeNull();
+    mockFetch(() => jsonResponse(200, { unread: 4 }));
+    expect(await unreadCountForShop(SHOP)).toBe(4);
+  });
+
+  it("opens a 60s circuit after an outage and logs once per window", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-02T12:00:00Z"));
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { fn } = mockFetch(() => jsonResponse(503, {}));
+
+    expect(await unreadCountForShop(SHOP)).toBeNull();
+    expect(fn).toHaveBeenCalledTimes(1);
+    // Breaker open: no calls, still null, no extra logs — for both helpers.
+    expect(await unreadCountForShop(SHOP)).toBeNull();
+    expect(await threadSummaryForShop(SHOP)).toBeNull();
+    expect(fn).toHaveBeenCalledTimes(1);
+    expect(log).toHaveBeenCalledTimes(1);
+
+    vi.setSystemTime(new Date("2026-10-02T12:00:59Z"));
+    expect(await unreadCountForShop(SHOP)).toBeNull();
+    expect(fn).toHaveBeenCalledTimes(1);
+
+    // Window over: one probe; still down → re-open and log once more.
+    vi.setSystemTime(new Date("2026-10-02T12:01:01Z"));
+    expect(await unreadCountForShop(SHOP)).toBeNull();
+    expect(fn).toHaveBeenCalledTimes(2);
+    expect(log).toHaveBeenCalledTimes(2);
+
+    // Recovered after the next window.
+    vi.setSystemTime(new Date("2026-10-02T12:02:02Z"));
+    mockFetch(() => jsonResponse(200, { unread: 1 }));
+    expect(await unreadCountForShop(SHOP)).toBe(1);
+  });
+});
+
+describe("threadSummaryForShop", () => {
+  it("is null when disabled", async () => {
+    vi.stubEnv("NERDLABS_MESSAGES_KEY", "");
+    const { fn } = mockFetch(() => jsonResponse(200, thread));
+    expect(await threadSummaryForShop(SHOP)).toBeNull();
+    expect(fn).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [{ id: "c", kind: "setup", status: "open" }, true],
+    [{ id: "c", kind: "setup", status: "setup_in_progress" }, true],
+    [{ id: "c", kind: "setup", status: "closed" }, false],
+    [{ id: "c", kind: "message", status: "open" }, false],
+    [null, false],
+  ])("conversation %j → setupOpen %s", async (conversation, setupOpen) => {
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    const { calls } = mockFetch(() => jsonResponse(200, { conversation, messages: [], unread: 2 }));
+    expect(await threadSummaryForShop(SHOP)).toEqual({ unread: 2, setupOpen });
+    expect(calls[0]!.url).toContain("/admin/api/v1/thread?shop=");
+    expect(timeout).toHaveBeenCalledWith(1000);
+  });
+
+  it("returns null on failure", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    mockFetch(() => {
+      throw new TypeError("fetch failed");
+    });
+    expect(await threadSummaryForShop(SHOP)).toBeNull();
   });
 });
 
@@ -184,16 +278,21 @@ describe("redactShop", () => {
     expect(fn).not.toHaveBeenCalled();
   });
 
-  it("deletes the thread and swallows failures with a log", async () => {
+  it("deletes the thread", async () => {
     const { calls } = mockFetch(() => jsonResponse(200, { deleted: 1 }));
-    await redactShop(SHOP);
-    expect(calls[0]!.init.method).toBe("DELETE");
-
-    const log = vi.spyOn(console, "error").mockImplementation(() => {});
-    mockFetch(() => {
-      throw new TypeError("connect ECONNREFUSED");
-    });
     await expect(redactShop(SHOP)).resolves.toBeUndefined();
+    expect(calls[0]!.init.method).toBe("DELETE");
+  });
+
+  it.each([
+    ["network failure", () => Promise.reject(new TypeError("connect ECONNREFUSED"))],
+    ["5xx", () => jsonResponse(500, {})],
+    ["401", () => jsonResponse(401, { error: "unauthorized" })],
+    ["off-contract body", () => jsonResponse(200, { ok: true })],
+  ])("logs and re-throws on %s so the webhook answers non-200", async (_label, respond) => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockFetch(respond);
+    await expect(redactShop(SHOP)).rejects.toBeInstanceOf(Error);
     expect(log).toHaveBeenCalled();
   });
 });

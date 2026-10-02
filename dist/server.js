@@ -5,6 +5,7 @@ import { json } from '@remix-run/node';
 // src/server/client.ts
 var DEFAULT_MESSAGES_URL = "http://127.0.0.1:3027";
 var REQUEST_TIMEOUT_MS = 3e3;
+var POST_TIMEOUT_MS = 8e3;
 var API_PREFIX = "/admin/api/v1";
 var MessagesUnavailableError = class extends Error {
   name = "MessagesUnavailableError";
@@ -71,7 +72,8 @@ function createMessagesClient(options = {}) {
   const baseUrl = (options.baseUrl ?? messagesBaseUrl()).replace(/\/+$/, "");
   const doFetch = options.fetch ?? globalThis.fetch;
   const timeoutMs = options.timeoutMs ?? REQUEST_TIMEOUT_MS;
-  async function request(method, path, body) {
+  const postTimeoutMs = options.postTimeoutMs ?? POST_TIMEOUT_MS;
+  async function request(method, path, body, timeout = timeoutMs) {
     const url = `${baseUrl}${API_PREFIX}${path}`;
     const headers = {
       Authorization: `Bearer ${apiKey}`,
@@ -84,7 +86,7 @@ function createMessagesClient(options = {}) {
         method,
         headers,
         body: body === void 0 ? void 0 : JSON.stringify(body),
-        signal: AbortSignal.timeout(timeoutMs),
+        signal: AbortSignal.timeout(timeout),
         // Never follow a redirect with the bearer key attached.
         redirect: "error"
       });
@@ -136,7 +138,9 @@ function createMessagesClient(options = {}) {
         const message = toMessage(raw);
         if (message) messages.push(message);
       }
-      return { conversation, messages, unread: toCount(data.unread) ?? 0 };
+      const unread = toCount(data.unread);
+      if (unread === null) throw malformed(path);
+      return { conversation, messages, unread };
     },
     async getUnread(shop) {
       const path = "/unread";
@@ -155,7 +159,7 @@ function createMessagesClient(options = {}) {
       };
       if (input.merchantName) body.merchantName = input.merchantName;
       if (input.locale) body.locale = input.locale;
-      const data = await request("POST", path, body);
+      const data = await request("POST", path, body, postTimeoutMs);
       const conversation = isObject(data) ? toConversation(data.conversation) : null;
       const message = isObject(data) ? toMessage(data.message) : null;
       if (!conversation || !message) throw malformed(path);
@@ -167,9 +171,55 @@ function createMessagesClient(options = {}) {
     async deleteThread(shop) {
       const path = "/thread";
       const data = await request("DELETE", `${path}${shopQuery(shop)}`);
-      return (isObject(data) ? toCount(data.deleted) : null) ?? 0;
+      const deleted = isObject(data) ? toCount(data.deleted) : null;
+      if (deleted === null) throw malformed(path);
+      return deleted;
     }
   };
+}
+
+// src/server/layout.ts
+var LAYOUT_TIMEOUT_MS = 1e3;
+var CIRCUIT_OPEN_MS = 6e4;
+var circuitOpenUntil = 0;
+var lastLogAt = Number.NEGATIVE_INFINITY;
+function resetMessagesCircuitBreaker() {
+  circuitOpenUntil = 0;
+  lastLogAt = Number.NEGATIVE_INFINITY;
+}
+function logThrottled(message, error) {
+  const now = Date.now();
+  if (now - lastLogAt < CIRCUIT_OPEN_MS) return;
+  lastLogAt = now;
+  console.error(message, error);
+}
+async function guarded(label, call) {
+  if (!isMessagesEnabled()) return null;
+  if (Date.now() < circuitOpenUntil) return null;
+  try {
+    return await call(createMessagesClient({ timeoutMs: LAYOUT_TIMEOUT_MS }));
+  } catch (error) {
+    if (error instanceof MessagesUnavailableError) {
+      circuitOpenUntil = Date.now() + CIRCUIT_OPEN_MS;
+      logThrottled(`[nerdlabs-messages] ${label} unavailable; skipping calls for ${CIRCUIT_OPEN_MS / 1e3}s:`, error);
+    } else {
+      logThrottled(`[nerdlabs-messages] ${label} failed:`, error);
+    }
+    return null;
+  }
+}
+async function unreadCountForShop(shop) {
+  return guarded("unread count", (client) => client.getUnread(shop));
+}
+async function threadSummaryForShop(shop) {
+  return guarded("thread summary", async (client) => {
+    const thread = await client.getThread(shop);
+    const conversation = thread.conversation;
+    return {
+      unread: thread.unread,
+      setupOpen: conversation?.kind === "setup" && conversation.status !== "closed"
+    };
+  });
 }
 
 // src/server/contact.ts
@@ -207,21 +257,24 @@ var MAX_NAME_LENGTH = 200;
 function isValidEmail(value) {
   return value.length <= MAX_EMAIL_LENGTH && EMAIL_PATTERN.test(value);
 }
-function defaultLocale(request) {
+function queryLocale(request) {
   try {
-    return new URL(request.url).searchParams.get("locale") ?? "en";
+    return new URL(request.url).searchParams.get("locale");
   } catch {
-    return "en";
+    return null;
   }
 }
-async function localeFor(options, request, session) {
-  try {
-    const raw = options.getLocale ? await options.getLocale(request, session) : defaultLocale(request);
-    return resolveLocale(raw);
-  } catch (error) {
-    console.error("[nerdlabs-messages] getLocale failed, using en:", error);
-    return "en";
+async function localeFor(options, request, session, postedLocale) {
+  if (options.getLocale) {
+    try {
+      const fromApp = await options.getLocale(request, session);
+      if (typeof fromApp === "string" && fromApp.trim()) return resolveLocale(fromApp);
+    } catch (error) {
+      console.error("[nerdlabs-messages] getLocale failed, falling back:", error);
+    }
   }
+  if (postedLocale) return resolveLocale(postedLocale);
+  return resolveLocale(queryLocale(request));
 }
 function field(form, name) {
   const value = form?.get(name);
@@ -303,7 +356,7 @@ function messagesRoute(options) {
       }
       if (!merchantEmail) return fail("error.emailRequired", 400);
       if (!isValidEmail(merchantEmail)) return fail("error.emailInvalid", 400);
-      const locale = await localeFor(options, request, session);
+      const locale = await localeFor(options, request, session, field(form, "locale"));
       await getClient().postMessage({
         shop: session.shop,
         body,
@@ -325,22 +378,14 @@ function messagesRoute(options) {
 }
 
 // src/server/index.ts
-async function unreadCountForShop(shop) {
-  if (!isMessagesEnabled()) return null;
-  try {
-    return await createMessagesClient().getUnread(shop);
-  } catch (error) {
-    console.error("[nerdlabs-messages] unread count failed:", error);
-    return null;
-  }
-}
 async function redactShop(shop) {
   if (!isMessagesEnabled()) return;
   try {
     await createMessagesClient().deleteThread(shop);
   } catch (error) {
     console.error(`[nerdlabs-messages] redactShop failed for ${shop}:`, error);
+    throw error;
   }
 }
 
-export { DEFAULT_MESSAGES_URL, MessagesRequestError, MessagesUnavailableError, REQUEST_TIMEOUT_MS, SHOP_CONTACT_QUERY, createMessagesClient, isMessagesEnabled, isValidEmail, messagesBaseUrl, messagesRoute, redactShop, shopContact, unreadCountForShop };
+export { CIRCUIT_OPEN_MS, DEFAULT_MESSAGES_URL, LAYOUT_TIMEOUT_MS, MessagesRequestError, MessagesUnavailableError, POST_TIMEOUT_MS, REQUEST_TIMEOUT_MS, SHOP_CONTACT_QUERY, createMessagesClient, isMessagesEnabled, isValidEmail, messagesBaseUrl, messagesRoute, redactShop, resetMessagesCircuitBreaker, shopContact, threadSummaryForShop, unreadCountForShop };

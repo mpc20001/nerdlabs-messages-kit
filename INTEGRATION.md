@@ -63,11 +63,15 @@ export default MessagesPage;
   uses it any more. That keeps `shopify.server` and the kit's server entry out of
   the browser bundle. A top-level `const route = messagesRoute(...)` relies on
   dead-code elimination of a call expression, so don't use it.
-- `getLocale` is optional. By default the kit reads the `?locale=` query param
-  that Shopify adds on the first load, and falls back to `"en"`. App Bridge nav
-  links drop that param. So pass `getLocale` if the app stashes the merchant's
-  locale (most of the fleet does, like the `routes/app` loader in FlashSaleKit).
-  Otherwise a German merchant who opens Messages from the nav gets English.
+- **Pass `getLocale` (strongly recommended).** Return the merchant's stored admin
+  locale, the same one the `routes/app` loader uses. App Bridge nav links drop
+  Shopify's `?locale=` param, so without `getLocale`:
+  - the page renders in the locale from the query param, or `"en"`;
+  - the action uses the locale the kit's UI posts, then the query param, then
+    `"en"`, to localize the service's system message and emails.
+
+  If `getLocale` throws or returns nothing, the kit falls through to those same
+  sources.
 - The App Bridge title bar is optional. Wrap the page to add one:
   `export default function Messages() { return <><TitleBar title="Messages" /><MessagesPage /></>; }`.
 
@@ -112,8 +116,19 @@ import { messagesNavLabel } from "@nerdlabs/messages-kit/ui";
 </NavMenu>
 ```
 
-`unreadCountForShop` is one cheap call with a 3-second timeout. It runs in parallel
-with the app's other layout work if you put it in a `Promise.all`.
+`unreadCountForShop` is built for every page load:
+- It's one call with a **1-second timeout**.
+- It returns `null` when the kit is disabled or on any error, and never throws.
+- It sits behind an in-process **circuit breaker**. After the service is
+  unavailable once, calls are skipped for 60 seconds, return `null`, and log at
+  most once per window.
+
+So a slow or down service costs at most ~1 second per minute per process. To
+overlap it with the app's other layout work, put it in a `Promise.all`.
+
+**Known lag:** opening Messages marks the thread read, but that runs in parallel
+with the layout loader. So on the first visit the badge can still show the old
+count. The badge clears on the next navigation.
 
 **Plan gate.** Merchants must be able to message us before they pick a plan.
 Exempt `/app/messages` in the layout's billing gate, next to the existing
@@ -129,13 +144,29 @@ messages route. The kit's loader and action only call `authenticate.admin`.
 ## 4. Dashboard: free-setup card / help line
 
 In the dashboard (`app._index`) loader, return `messagesEnabled: isMessagesEnabled()`
-along with the app's own "setup unfinished" boolean:
+along with the app's own "setup unfinished" boolean. If setup is unfinished, also
+ask whether a setup request is already open, so the card doesn't offer it again:
+
+```js
+import { isMessagesEnabled, threadSummaryForShop } from "@nerdlabs/messages-kit/server";
+
+const summary = setupUnfinished ? await threadSummaryForShop(session.shop) : null;
+return { /* … */ messagesEnabled: isMessagesEnabled(), setupRequested: summary?.setupOpen ?? false };
+```
+
+`threadSummaryForShop` returns `{ unread, setupOpen } | null`. It has the same
+1-second timeout, circuit breaker and fail-open `null` as `unreadCountForShop`.
 
 ```jsx
 import { FreeSetupCard, HelpLine } from "@nerdlabs/messages-kit/ui";
 
 {setupUnfinished ? (
-  <FreeSetupCard enabled={messagesEnabled} locale={locale} actionPath="/app/messages" />
+  <FreeSetupCard
+    enabled={messagesEnabled}
+    alreadyRequested={setupRequested}
+    locale={locale}
+    actionPath="/app/messages"
+  />
 ) : (
   <HelpLine enabled={messagesEnabled} locale={locale} href="/app/messages" />
 )}
@@ -145,24 +176,37 @@ import { FreeSetupCard, HelpLine } from "@nerdlabs/messages-kit/ui";
   The reply-to email comes from the shop's `contactEmail || email`, so the card
   doesn't need an email field. If the shop has no email, the card shows an email
   field. Pass `email={…}` if the app already knows a better address.
-- After a request, the card switches to "Requested! We'll email you within 1
+- With `alreadyRequested`, or after a request from the card, it shows "Requested! We'll email you within 1
   business day." with a link to Messages. The Messages page then shows the
   "Free setup requested" banner until we close the conversation.
 - Both components render `null` when `enabled` is false.
 
 ## 5. GDPR `shop/redact`
 
-In `app/routes/webhooks.shop.redact.*`, in the branch that actually purges (not
-the "reinstalled, nothing purged" branch):
+`redactShop(shop)` deletes the shop's conversation.
+- When the kit is disabled, it does nothing.
+- When the kit is enabled, it **throws on any failure**: network error, timeout,
+  non-2xx, or an off-contract response. The webhook must then answer non-200 so
+  Shopify redelivers. Swallowing the error would quietly lose a mandatory erasure.
+- The service's delete is idempotent, so redelivery is safe.
+
+In `app/routes/webhooks.shop.redact.*`, call it in the branch that actually purges
+(not the "reinstalled, nothing purged" branch). Call it after the app's own
+redaction has completed:
 
 ```js
 import { redactShop } from "@nerdlabs/messages-kit/server";
 
-await redactShop(shop); // no-op when disabled; never throws (logs on failure)
+// … the app's own purge (sessions, shop rows) has completed above …
+try {
+  await redactShop(shop);
+} catch (error) {
+  console.error(`[shop/redact] messages redaction failed for ${shop}`, error);
+  // Non-200 → Shopify redelivers. The app's own purge is idempotent and re-runs harmlessly.
+  return new Response("messages redaction failed", { status: 500 });
+}
+return new Response();
 ```
-
-The service's delete is idempotent. A failed delete is logged and doesn't turn the
-webhook into a 500.
 
 ## 6. Privacy policy
 
@@ -181,8 +225,8 @@ Add one line to the app's privacy policy (landing page plus any in-app copy):
 | `@nerdlabs/messages-kit/server` | `@nerdlabs/messages-kit/ui` |
 |---|---|
 | `isMessagesEnabled()` | `<MessagesPage />` |
-| `createMessagesClient({ apiKey?, baseUrl? })` | `<FreeSetupCard enabled locale actionPath email? />` |
-| `unreadCountForShop(shop)` | `<HelpLine enabled locale href />` |
+| `createMessagesClient({ apiKey?, baseUrl? })` | `<FreeSetupCard enabled locale actionPath email? alreadyRequested? />` |
+| `unreadCountForShop(shop)`, `threadSummaryForShop(shop)` | `<HelpLine enabled locale href />` |
 | `redactShop(shop)` | `messagesNavLabel(locale, unread)` |
 | `shopContact(admin)` | `t(locale, key, vars?)` |
 | `messagesRoute({ app, authenticate, getLocale? })` | `resolveLocale`, `errorMessage` |

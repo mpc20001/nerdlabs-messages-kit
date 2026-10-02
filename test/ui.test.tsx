@@ -121,6 +121,21 @@ describe("<FreeSetupCard />", () => {
   });
 });
 
+describe("<FreeSetupCard alreadyRequested />", () => {
+  it("renders the requested state with a Messages link instead of the form", () => {
+    const html = renderRoute(() => <FreeSetupCard enabled alreadyRequested locale="en" messagesHref="/app/messages" />);
+    const plain = text(html);
+    expect(plain).toContain("Requested! We'll email you within 1 business day.");
+    expect(plain).toContain("View messages");
+    expect(html).toContain('href="/app/messages"');
+    expect(plain).not.toContain("Set it up for me");
+  });
+
+  it("still renders null when disabled", () => {
+    expect(text(renderRoute(() => <FreeSetupCard enabled={false} alreadyRequested />)).trim()).toBe("");
+  });
+});
+
 describe("<HelpLine />", () => {
   it("renders null when disabled, a link when enabled", () => {
     expect(text(renderRoute(() => <HelpLine enabled={false} />)).trim()).toBe("");

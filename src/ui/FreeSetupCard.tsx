@@ -6,6 +6,7 @@ import {
   isMessageKey,
   MAX_EMAIL_LENGTH,
   MAX_NOTE_LENGTH,
+  resolveLocale,
   t,
   type MessageKey,
 } from "../i18n/index.js";
@@ -21,16 +22,23 @@ export type FreeSetupCardProps = {
   messagesHref?: string;
   /** Reply-to email. Optional: the action falls back to the shop's contact email. */
   email?: string | null;
+  /**
+   * The shop already has an open setup request (from `threadSummaryForShop(shop)?.setupOpen`).
+   * Renders the "Requested!" state instead of the form.
+   */
+  alreadyRequested?: boolean;
 };
 
 /** Dashboard card offering free done-for-you setup. Posts `intent=setup` to the messages action. */
 export function FreeSetupCard({
   enabled,
-  locale,
+  locale: localeProp,
   actionPath = "/app/messages",
   messagesHref,
   email: emailProp,
+  alreadyRequested = false,
 }: FreeSetupCardProps) {
+  const locale = resolveLocale(localeProp);
   const fetcher = useFetcher<MessagesActionData>();
   const [note, setNote] = useState("");
   const [email, setEmail] = useState(emailProp ?? "");
@@ -56,7 +64,7 @@ export function FreeSetupCard({
 
   const href = messagesHref ?? actionPath;
 
-  if (requested) {
+  if (requested || alreadyRequested) {
     return (
       <Card>
         <BlockStack gap="300">
@@ -83,7 +91,7 @@ export function FreeSetupCard({
     }
     setError(null);
     fetcher.submit(
-      { intent: "setup", body: trimmedNote, merchantEmail: email.trim() },
+      { intent: "setup", body: trimmedNote, merchantEmail: email.trim(), locale },
       { method: "post", action: actionPath },
     );
   };

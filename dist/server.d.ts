@@ -4,6 +4,11 @@ import { TypedResponse } from '@remix-run/node';
 
 declare const DEFAULT_MESSAGES_URL = "http://127.0.0.1:3027";
 declare const REQUEST_TIMEOUT_MS = 3000;
+/**
+ * POST /messages gets a longer budget: a timeout there looks like a failure to
+ * the merchant even if the service stored the message, inviting a duplicate re-send.
+ */
+declare const POST_TIMEOUT_MS = 8000;
 /** The service could not be reached, timed out, returned 5xx, or returned garbage. Fail open. */
 declare class MessagesUnavailableError extends Error {
     readonly name = "MessagesUnavailableError";
@@ -27,8 +32,10 @@ type MessagesClientOptions = {
     baseUrl?: string;
     /** Injected for tests; defaults to the global `fetch`. */
     fetch?: typeof fetch;
-    /** Per-request timeout in ms; defaults to 3000. */
+    /** Per-request timeout in ms for reads/read-marks/deletes; defaults to 3000. */
     timeoutMs?: number;
+    /** Timeout in ms for `postMessage`; defaults to 8000. */
+    postTimeoutMs?: number;
 };
 type MessagesClient = {
     getThread(shop: string): Promise<Thread>;
@@ -41,6 +48,32 @@ type MessagesClient = {
 declare function isMessagesEnabled(): boolean;
 declare function messagesBaseUrl(): string;
 declare function createMessagesClient(options?: MessagesClientOptions): MessagesClient;
+
+/**
+ * Helpers that run on (nearly) every page load — the layout's nav badge and the
+ * dashboard's setup card. They must never noticeably slow a page down, so they
+ * use a short timeout and a process-local circuit breaker: once the service is
+ * unavailable, calls are skipped for `CIRCUIT_OPEN_MS` and return `null`.
+ */
+declare const LAYOUT_TIMEOUT_MS = 1000;
+declare const CIRCUIT_OPEN_MS = 60000;
+/** Test/ops hook: close the breaker and reset log throttling. */
+declare function resetMessagesCircuitBreaker(): void;
+/**
+ * Unread admin/system message count for the nav badge. `null` when the kit is
+ * disabled, the breaker is open, or on any error — never throws, ≤ ~1s.
+ */
+declare function unreadCountForShop(shop: string): Promise<number | null>;
+type ThreadSummary = {
+    unread: number;
+    /** A free-setup request exists and isn't closed yet. */
+    setupOpen: boolean;
+};
+/**
+ * Cheap thread summary for the dashboard (e.g. `FreeSetupCard alreadyRequested`).
+ * Same fail-open contract as `unreadCountForShop`: `null` when disabled/unavailable.
+ */
+declare function threadSummaryForShop(shop: string): Promise<ThreadSummary | null>;
 
 /**
  * The slice of shopify-app-remix's `admin` context the kit needs. Declared as a
@@ -76,8 +109,9 @@ type MessagesRouteOptions = {
      */
     authenticate: (request: Request) => Promise<MessagesAuthResult>;
     /**
-     * Merchant locale. Defaults to the `locale` query param Shopify Admin adds
-     * to embedded-app URLs, else "en".
+     * Merchant locale — strongly recommended (return the app's stored admin
+     * locale). Without it: the kit UI's posted locale (actions only), then the
+     * `?locale=` query param Shopify adds on first load, then "en".
      */
     getLocale?: (request: Request, session: MessagesSession) => string | null | undefined | Promise<string | null | undefined>;
     /**
@@ -104,15 +138,12 @@ declare function isValidEmail(value: string): boolean;
 declare function messagesRoute(options: MessagesRouteOptions): MessagesRoute;
 
 /**
- * Unread admin/system message count for the nav badge. `null` when the kit is
- * disabled or on any error — never throws, so it is safe in the app layout loader.
- */
-declare function unreadCountForShop(shop: string): Promise<number | null>;
-/**
- * GDPR `shop/redact`: delete this shop's conversation. No-op when disabled.
- * Swallows failures (logged) so the webhook still answers 200; the service's
- * delete is idempotent, so Shopify's own redelivery or a manual rerun is safe.
+ * GDPR `shop/redact`: delete this shop's conversation. A no-op (resolves) only
+ * when the kit is disabled. When enabled, any failure is logged and RE-THROWN:
+ * the webhook must answer non-200 so Shopify redelivers — swallowing it would
+ * silently lose a mandatory erasure. The service's delete is idempotent, so
+ * redelivery is safe.
  */
 declare function redactShop(shop: string): Promise<void>;
 
-export { type AdminGraphqlClient, DEFAULT_MESSAGES_URL, MessagesActionData, type MessagesAuthResult, type MessagesClient, type MessagesClientOptions, MessagesLoaderData, MessagesRequestError, type MessagesRoute, type MessagesRouteArgs, type MessagesRouteOptions, type MessagesSession, MessagesUnavailableError, PostMessageInput, PostMessageResult, REQUEST_TIMEOUT_MS, SHOP_CONTACT_QUERY, ShopContact, Thread, createMessagesClient, isMessagesEnabled, isValidEmail, messagesBaseUrl, messagesRoute, redactShop, shopContact, unreadCountForShop };
+export { type AdminGraphqlClient, CIRCUIT_OPEN_MS, DEFAULT_MESSAGES_URL, LAYOUT_TIMEOUT_MS, MessagesActionData, type MessagesAuthResult, type MessagesClient, type MessagesClientOptions, MessagesLoaderData, MessagesRequestError, type MessagesRoute, type MessagesRouteArgs, type MessagesRouteOptions, type MessagesSession, MessagesUnavailableError, POST_TIMEOUT_MS, PostMessageInput, PostMessageResult, REQUEST_TIMEOUT_MS, SHOP_CONTACT_QUERY, ShopContact, Thread, type ThreadSummary, createMessagesClient, isMessagesEnabled, isValidEmail, messagesBaseUrl, messagesRoute, redactShop, resetMessagesCircuitBreaker, shopContact, threadSummaryForShop, unreadCountForShop };

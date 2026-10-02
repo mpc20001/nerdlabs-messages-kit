@@ -149,6 +149,35 @@ describe("action", () => {
     });
   });
 
+  it.each([
+    ["posted field beats the query param", undefined, "ja", "?locale=de", "ja"],
+    ["query param when nothing is posted", undefined, "", "?locale=de-CH", "de"],
+    ["en when there is nothing", undefined, "", "", "en"],
+    ["getLocale beats the posted field", (): string => "pl", "ja", "?locale=de", "pl"],
+    ["getLocale returning null falls through to posted", (): null => null, "pt", "", "pt-BR"],
+    [
+      "getLocale throwing falls through to posted",
+      (): never => {
+        throw new Error("x");
+      },
+      "zh-Hant",
+      "",
+      "zh-TW",
+    ],
+  ] as const)("locale: %s", async (_label, getLocale, posted, query, expected) => {
+    const { calls } = mockFetch(() => jsonResponse(201, { conversation: thread.conversation, message: thread.messages[0] }));
+    const route = messagesRoute({
+      app: "X",
+      authenticate: async () => ({ admin: adminWith({}), session: { shop: SHOP } }),
+      ...(getLocale ? { getLocale } : {}),
+    });
+    const res = await route.action({
+      request: post({ intent: "send", body: "hi", merchantEmail: "a@b.co", locale: posted }, `https://app.test/app/messages${query}`),
+    });
+    expect(await body<MessagesActionData>(res)).toEqual({ ok: true, intent: "send" });
+    expect(JSON.parse(calls[0]!.init.body as string).locale).toBe(expected);
+  });
+
   it("setup: empty note allowed, email + name filled from shopContact", async () => {
     const { calls } = mockFetch(() => jsonResponse(201, { conversation: { ...thread.conversation, kind: "setup" }, message: thread.messages[0] }));
     const { route, admin } = setup();

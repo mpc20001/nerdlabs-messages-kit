@@ -11,6 +11,11 @@ import type {
 
 export const DEFAULT_MESSAGES_URL = "http://127.0.0.1:3027";
 export const REQUEST_TIMEOUT_MS = 3000;
+/**
+ * POST /messages gets a longer budget: a timeout there looks like a failure to
+ * the merchant even if the service stored the message, inviting a duplicate re-send.
+ */
+export const POST_TIMEOUT_MS = 8000;
 const API_PREFIX = "/admin/api/v1";
 
 /** The service could not be reached, timed out, returned 5xx, or returned garbage. Fail open. */
@@ -42,8 +47,10 @@ export type MessagesClientOptions = {
   baseUrl?: string;
   /** Injected for tests; defaults to the global `fetch`. */
   fetch?: typeof fetch;
-  /** Per-request timeout in ms; defaults to 3000. */
+  /** Per-request timeout in ms for reads/read-marks/deletes; defaults to 3000. */
   timeoutMs?: number;
+  /** Timeout in ms for `postMessage`; defaults to 8000. */
+  postTimeoutMs?: number;
 };
 
 export type MessagesClient = {
@@ -120,8 +127,14 @@ export function createMessagesClient(options: MessagesClientOptions = {}): Messa
   const baseUrl = (options.baseUrl ?? messagesBaseUrl()).replace(/\/+$/, "");
   const doFetch = options.fetch ?? globalThis.fetch;
   const timeoutMs = options.timeoutMs ?? REQUEST_TIMEOUT_MS;
+  const postTimeoutMs = options.postTimeoutMs ?? POST_TIMEOUT_MS;
 
-  async function request(method: "GET" | "POST" | "DELETE", path: string, body?: JsonObject): Promise<unknown> {
+  async function request(
+    method: "GET" | "POST" | "DELETE",
+    path: string,
+    body?: JsonObject,
+    timeout: number = timeoutMs,
+  ): Promise<unknown> {
     const url = `${baseUrl}${API_PREFIX}${path}`;
     const headers: Record<string, string> = {
       Authorization: `Bearer ${apiKey}`,
@@ -135,7 +148,7 @@ export function createMessagesClient(options: MessagesClientOptions = {}): Messa
         method,
         headers,
         body: body === undefined ? undefined : JSON.stringify(body),
-        signal: AbortSignal.timeout(timeoutMs),
+        signal: AbortSignal.timeout(timeout),
         // Never follow a redirect with the bearer key attached.
         redirect: "error",
       });
@@ -194,7 +207,11 @@ export function createMessagesClient(options: MessagesClientOptions = {}): Messa
         const message = toMessage(raw);
         if (message) messages.push(message);
       }
-      return { conversation, messages, unread: toCount(data.unread) ?? 0 };
+      // A required count that's missing/invalid means the response isn't the
+      // contract: treating it as 0 would hide unread replies and skip markRead.
+      const unread = toCount(data.unread);
+      if (unread === null) throw malformed(path);
+      return { conversation, messages, unread };
     },
 
     async getUnread(shop) {
@@ -215,7 +232,7 @@ export function createMessagesClient(options: MessagesClientOptions = {}): Messa
       };
       if (input.merchantName) body.merchantName = input.merchantName;
       if (input.locale) body.locale = input.locale;
-      const data = await request("POST", path, body);
+      const data = await request("POST", path, body, postTimeoutMs);
       const conversation = isObject(data) ? toConversation(data.conversation) : null;
       const message = isObject(data) ? toMessage(data.message) : null;
       if (!conversation || !message) throw malformed(path);
@@ -229,7 +246,10 @@ export function createMessagesClient(options: MessagesClientOptions = {}): Messa
     async deleteThread(shop) {
       const path = "/thread";
       const data = await request("DELETE", `${path}${shopQuery(shop)}`);
-      return (isObject(data) ? toCount(data.deleted) : null) ?? 0;
+      // GDPR erasure must be verifiable: an off-contract body is an error, not "0".
+      const deleted = isObject(data) ? toCount(data.deleted) : null;
+      if (deleted === null) throw malformed(path);
+      return deleted;
     },
   };
 }

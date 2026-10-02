@@ -1,4 +1,4 @@
-import { t, SUPPORT_EMAIL, isMessageKey, errorMessage, MAX_NOTE_LENGTH, MAX_EMAIL_LENGTH, MAX_BODY_LENGTH } from './shared-chunk.js';
+import { resolveLocale, t, SUPPORT_EMAIL, isMessageKey, errorMessage, MAX_NOTE_LENGTH, MAX_EMAIL_LENGTH, MAX_BODY_LENGTH } from './shared-chunk.js';
 export { SUPPORTED_LOCALES, SUPPORT_EMAIL, errorMessage, isMessageKey, messagesNavLabel, resolveLocale, t } from './shared-chunk.js';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLoaderData, useFetcher } from '@remix-run/react';
@@ -143,10 +143,11 @@ function Composer({
     setSent(false);
     if (errors.body || errors.email) return;
     fetcher.submit(
-      { intent: "send", body: trimmedBody, merchantEmail: trimmedEmail },
+      // `locale` lets the action localize system mail even when the app has no getLocale.
+      { intent: "send", body: trimmedBody, merchantEmail: trimmedEmail, locale },
       { method: "post", ...actionPath ? { action: actionPath } : {} }
     );
-  }, [body, email, actionPath, fetcher]);
+  }, [body, email, locale, actionPath, fetcher]);
   return /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(
     "form",
     {
@@ -200,7 +201,7 @@ function Composer({
 function MessagesPage({ locale: localeProp, actionPath } = {}) {
   const data = useLoaderData();
   if (!data || !data.enabled) return null;
-  const locale = localeProp ?? data.locale;
+  const locale = resolveLocale(localeProp ?? data.locale);
   if (data.unavailable) {
     return /* @__PURE__ */ jsx(Page, { title: t(locale, "page.title"), children: /* @__PURE__ */ jsx(Banner, { tone: "warning", children: /* @__PURE__ */ jsx("p", { children: t(locale, "error.unavailable", { email: SUPPORT_EMAIL }) }) }) });
   }
@@ -216,11 +217,13 @@ function MessagesPage({ locale: localeProp, actionPath } = {}) {
 }
 function FreeSetupCard({
   enabled,
-  locale,
+  locale: localeProp,
   actionPath = "/app/messages",
   messagesHref,
-  email: emailProp
+  email: emailProp,
+  alreadyRequested = false
 }) {
+  const locale = resolveLocale(localeProp);
   const fetcher = useFetcher();
   const [note, setNote] = useState("");
   const [email, setEmail] = useState(emailProp ?? "");
@@ -241,7 +244,7 @@ function FreeSetupCard({
   }, [data, fetcher.state]);
   if (!enabled) return null;
   const href = messagesHref ?? actionPath;
-  if (requested) {
+  if (requested || alreadyRequested) {
     return /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", children: [
       /* @__PURE__ */ jsx(Banner, { tone: "success", children: /* @__PURE__ */ jsx("p", { children: t(locale, "setupCard.success") }) }),
       /* @__PURE__ */ jsx(InlineStack, { children: /* @__PURE__ */ jsx(Button, { url: href, children: t(locale, "setupCard.viewMessages") }) })
@@ -258,7 +261,7 @@ function FreeSetupCard({
     }
     setError(null);
     fetcher.submit(
-      { intent: "setup", body: trimmedNote, merchantEmail: email.trim() },
+      { intent: "setup", body: trimmedNote, merchantEmail: email.trim(), locale },
       { method: "post", action: actionPath }
     );
   };

@@ -20,12 +20,17 @@ match, then known alias or language prefix (`pt` becomes `pt-BR`, `zh` becomes
 ## Behaviour
 
 - **Off by default.** With no `NERDLABS_MESSAGES_KEY`, the kit makes no calls, the
-  components render `null`, `unreadCountForShop` returns `null` and `redactShop`
-  does nothing. That's the setting for private/custom deployments.
-- **Fails open.** Every call has a 3-second timeout. If the service is down, slow
-  or answers 5xx, the page shows "Messages are unavailable right now — email
+  components render `null`, `unreadCountForShop` and `threadSummaryForShop`
+  return `null`, and `redactShop` does nothing. That's the setting for
+  private/custom deployments.
+- **Fails open.** Calls time out after 3 seconds, except posting a message (8
+  seconds) and the per-page-load helpers `unreadCountForShop` and
+  `threadSummaryForShop`. Those get 1 second plus a 60-second circuit breaker.
+  If the service is down, slow or answers 5xx, the page shows "Messages are unavailable right now — email
   support@nerdlabs.us". Nothing the kit does produces a 500 page. Only the app's
   own `authenticate.admin` redirects propagate.
+- **The one exception: `redactShop` throws** when the kit is enabled and the
+  delete fails. The GDPR webhook then answers non-200 and Shopify redelivers.
 - **Server-to-server only.** Calls go to `NERDLABS_MESSAGES_URL` (default
   `http://127.0.0.1:3027`) with `Authorization: Bearer <key>`, and redirects are
   never followed.

@@ -8,7 +8,16 @@ export {
   MessagesUnavailableError,
   DEFAULT_MESSAGES_URL,
   REQUEST_TIMEOUT_MS,
+  POST_TIMEOUT_MS,
 } from "./client.js";
+export {
+  unreadCountForShop,
+  threadSummaryForShop,
+  resetMessagesCircuitBreaker,
+  LAYOUT_TIMEOUT_MS,
+  CIRCUIT_OPEN_MS,
+} from "./layout.js";
+export type { ThreadSummary } from "./layout.js";
 export type { MessagesClient, MessagesClientOptions } from "./client.js";
 export { shopContact, SHOP_CONTACT_QUERY } from "./contact.js";
 export type { AdminGraphqlClient } from "./contact.js";
@@ -25,23 +34,11 @@ export type { MessageKey, SupportedLocale } from "../i18n/index.js";
 export type * from "../types.js";
 
 /**
- * Unread admin/system message count for the nav badge. `null` when the kit is
- * disabled or on any error — never throws, so it is safe in the app layout loader.
- */
-export async function unreadCountForShop(shop: string): Promise<number | null> {
-  if (!isMessagesEnabled()) return null;
-  try {
-    return await createMessagesClient().getUnread(shop);
-  } catch (error) {
-    console.error("[nerdlabs-messages] unread count failed:", error);
-    return null;
-  }
-}
-
-/**
- * GDPR `shop/redact`: delete this shop's conversation. No-op when disabled.
- * Swallows failures (logged) so the webhook still answers 200; the service's
- * delete is idempotent, so Shopify's own redelivery or a manual rerun is safe.
+ * GDPR `shop/redact`: delete this shop's conversation. A no-op (resolves) only
+ * when the kit is disabled. When enabled, any failure is logged and RE-THROWN:
+ * the webhook must answer non-200 so Shopify redelivers — swallowing it would
+ * silently lose a mandatory erasure. The service's delete is idempotent, so
+ * redelivery is safe.
  */
 export async function redactShop(shop: string): Promise<void> {
   if (!isMessagesEnabled()) return;
@@ -49,5 +46,6 @@ export async function redactShop(shop: string): Promise<void> {
     await createMessagesClient().deleteThread(shop);
   } catch (error) {
     console.error(`[nerdlabs-messages] redactShop failed for ${shop}:`, error);
+    throw error;
   }
 }
