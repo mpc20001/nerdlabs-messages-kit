@@ -11,7 +11,7 @@ export const en = {
 
   "page.title": "Messages",
   "page.subtitle":
-    "Questions about {app}? Message the Nerd Labs team — we reply here and by email, usually within 1 business day.",
+    "Questions about {app}? Message the Nerd Labs team — we reply here and by email, usually within a few hours.",
   "page.empty": "No messages yet. Ask us anything — a real person reads every message.",
 
   "author.you": "You",
