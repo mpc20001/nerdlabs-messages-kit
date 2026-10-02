@@ -1,0 +1,54 @@
+{
+  "name": "@nerdlabs/messages-kit",
+  "version": "1.0.0",
+  "description": "Drop-in in-app support chat (Nerd Labs Messages) for Nerd Labs Shopify Remix apps.",
+  "license": "UNLICENSED",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js"
+    },
+    "./ui": {
+      "types": "./dist/ui.d.ts",
+      "import": "./dist/ui.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "INTEGRATION.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "peerDependencies": {
+    "@remix-run/node": "^2",
+    "@remix-run/react": "^2",
+    "@shopify/polaris": "^12",
+    "react": "^18"
+  },
+  "devDependencies": {
+    "@remix-run/node": "^2.17.5",
+    "@remix-run/react": "^2.17.5",
+    "@remix-run/testing": "^2.17.5",
+    "@shopify/polaris": "^12.27.0",
+    "@types/node": "^22.20.5",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^2.1.9"
+  }
+}
