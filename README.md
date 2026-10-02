@@ -7,7 +7,8 @@ with one shared admin inbox. It is the client side of the
 - **`@nerdlabs/messages-kit/server`** is Node-only: the service client, a
   Remix loader + action for `/app/messages`, the unread count for the nav badge,
   the GDPR redact helper and the shop contact lookup.
-- **`@nerdlabs/messages-kit/ui`** holds the Polaris 12 components: `MessagesPage`,
+- **`@nerdlabs/messages-kit/ui`** holds the Polaris components (peer dep
+  `@shopify/polaris ^12 || ^13`): `MessagesPage`,
   `FreeSetupCard`, `HelpLine`, plus `messagesNavLabel` and `t`.
 
 All strings are localized in 21 locales: en, cs, da, de, es, fi, fr, it, ja, ko,
@@ -62,4 +63,14 @@ npm run build     # tsup → dist/ (commit dist/; there is intentionally no `pre
 ```
 
 Releasing: bump `version`, `npm run build`, commit `dist/`, then tag `vX.Y.Z`.
-Apps pin `github:mpc20001/nerdlabs-messages-kit#vX.Y.Z`.
+
+Apps pin the tag's **commit** as an HTTPS tarball, not `github:…#vX.Y.Z`. npm
+records `github:` deps as `git+ssh://` in the lockfile, and Docker
+`node:*-alpine` or CI without git/SSH can't install them:
+
+```bash
+git ls-remote https://github.com/mpc20001/nerdlabs-messages-kit.git 'refs/tags/vX.Y.Z*'  # use the ^{} sha
+npm i https://codeload.github.com/mpc20001/nerdlabs-messages-kit/tar.gz/<commit-sha>
+```
+
+The lockfile records the tarball's `integrity` hash, so the install is pinned.
