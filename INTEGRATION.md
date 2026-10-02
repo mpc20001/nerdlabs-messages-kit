@@ -173,10 +173,12 @@ import { FreeSetupCard, HelpLine } from "@nerdlabs/messages-kit/ui";
 ```
 
 - `FreeSetupCard` posts `intent=setup` to the messages action with `useFetcher`.
-- Optional `email` / `name` props (e.g. from your dashboard loader) are posted along; with an email the action makes **no** Admin API lookup. Without one it looks up the shop's contact email once.
   The reply-to email comes from the shop's `contactEmail || email`, so the card
   doesn't need an email field. If the shop has no email, the card shows an email
   field. Pass `email={…}` if the app already knows a better address.
+- Optional `email` / `name` props (e.g. from your dashboard loader) are posted
+  along: with an email the action makes **no** Admin API lookup; without one it
+  looks up the shop's contact email once.
 - With `alreadyRequested`, or after a request from the card, it shows "Requested! We'll email you within 1
   business day." with a link to Messages. The Messages page then shows the
   "Free setup requested" banner until we close the conversation.
