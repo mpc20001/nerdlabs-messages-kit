@@ -59,7 +59,8 @@ describe("<MessagesPage />", () => {
     const html = renderRoute(() => <MessagesPage />, enabledData());
     const plain = text(html);
     expect(plain).toContain("Messages");
-    expect(plain).toContain("Questions about QuickFiles?");
+    expect(plain).toContain("Questions about QuickFiles, or want it set up or customized");
+    expect(html).toContain('href="mailto:support@nerdlabs.us"');
     expect(plain).toContain("Hi there");
     expect(plain).toContain("Hello! How can I help?");
     expect(plain).toContain("You");
@@ -112,7 +113,7 @@ describe("<FreeSetupCard />", () => {
 
   it("renders the localized card", () => {
     const en = text(renderRoute(() => <FreeSetupCard enabled locale="en" />));
-    expect(en).toContain("Want us to set it up for you? It's free.");
+    expect(en).toContain("Want us to set it up or customize it for you? It's free.");
     expect(en).toContain("Tell us what you want it to do");
     expect(en).toContain("Set it up for me");
     expect(en).toContain("What should the app do? (optional)");
@@ -140,7 +141,7 @@ describe("<HelpLine />", () => {
   it("renders null when disabled, a link when enabled", () => {
     expect(text(renderRoute(() => <HelpLine enabled={false} />)).trim()).toBe("");
     const html = renderRoute(() => <HelpLine enabled locale="es" href="/app/messages" />);
-    expect(text(html)).toContain("¿Necesitas ayuda?");
+    expect(text(html)).toContain("¿Necesitas ayuda o algo personalizado?");
     expect(text(html)).toContain("Escríbenos");
     expect(html).toContain('href="/app/messages"');
   });

@@ -1,6 +1,6 @@
 {
   "name": "@nerdlabs/messages-kit",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Drop-in in-app support chat (Nerd Labs Messages) for Nerd Labs Shopify Remix apps.",
   "license": "UNLICENSED",
   "private": true,
