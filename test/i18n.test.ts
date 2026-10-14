@@ -57,7 +57,7 @@ describe("t", () => {
   it("substitutes vars literally and falls back to en", () => {
     expect(t("de", "error.bodyTooLong", { max: 5000 })).toBe("Nachrichten dürfen höchstens 5000 Zeichen lang sein.");
     expect(t("xx", "nav.messages")).toBe("Messages");
-    expect(t("en", "page.subtitle", { app: "$& $1 Q" })).toContain("Questions about $& $1 Q?");
+    expect(t("en", "page.subtitle", { app: "$& $1 Q" })).toContain("Questions about $& $1 Q,");
     expect(t("en", "error.unavailable")).toContain("{email}");
   });
 });

@@ -11,7 +11,8 @@ export const en = {
 
   "page.title": "Messages",
   "page.subtitle":
-    "Questions about {app}? Message the Nerd Labs team — we reply here and by email, usually within a few hours.",
+    "Questions about {app}, or want it set up or customized for your store? Message the Nerd Labs team. Real people read every message, and setup and customization are free. We reply here and by email, usually within a few hours.",
+  "page.emailPrefix": "Prefer email? Write to us at",
   "page.empty": "No messages yet. Ask us anything — a real person reads every message.",
 
   "author.you": "You",
@@ -27,15 +28,15 @@ export const en = {
 
   "setup.requestedBanner": "Free setup requested — we'll reach out within 1 business day",
 
-  "setupCard.title": "Want us to set it up for you? It's free.",
+  "setupCard.title": "Want us to set it up or customize it for you? It's free.",
   "setupCard.body":
-    "Tell us what you want it to do and we'll configure the app in your store for you — usually within 1 business day.",
+    "Tell us what you want it to do, from basic setup to a custom tweak for your store, and we'll do it for you — usually within 1 business day.",
   "setupCard.noteLabel": "What should the app do? (optional)",
   "setupCard.button": "Set it up for me",
   "setupCard.success": "Requested! We'll email you within 1 business day.",
   "setupCard.viewMessages": "View messages",
 
-  "helpLine.text": "Need a hand? We'll set it up for you for free.",
+  "helpLine.text": "Need a hand or something customized? We'll do it for free.",
   "helpLine.button": "Message us",
 
   "error.bodyRequired": "Please write a message first.",

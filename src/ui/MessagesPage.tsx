@@ -8,6 +8,7 @@ import {
   Card,
   FormLayout,
   InlineStack,
+  Link,
   Page,
   Text,
   TextField,
@@ -277,6 +278,9 @@ export function MessagesPage({ locale: localeProp, actionPath }: MessagesPagePro
           <BlockStack gap="400">
             <Text as="p" tone="subdued">
               {t(locale, "page.subtitle", { app: data.app })}
+            </Text>
+            <Text as="p" tone="subdued">
+              {t(locale, "page.emailPrefix")} <Link url={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</Link>
             </Text>
             <Thread messages={data.messages} locale={locale} />
           </BlockStack>

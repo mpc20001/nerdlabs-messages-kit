@@ -2,7 +2,7 @@ import { resolveLocale, t, SUPPORT_EMAIL, isMessageKey, errorMessage, MAX_NOTE_L
 export { SUPPORTED_LOCALES, SUPPORT_EMAIL, errorMessage, isMessageKey, messagesNavLabel, resolveLocale, t } from './shared-chunk.js';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLoaderData, useFetcher } from '@remix-run/react';
-import { Page, Banner, BlockStack, Card, Text, InlineStack, Button, TextField, FormLayout, Box } from '@shopify/polaris';
+import { Page, Banner, BlockStack, Card, Text, Link, InlineStack, Button, TextField, FormLayout, Box } from '@shopify/polaris';
 import { jsx, jsxs } from 'react/jsx-runtime';
 
 function useHydrated() {
@@ -228,6 +228,11 @@ function MessagesPage({ locale: localeProp, actionPath } = {}) {
     setupPending ? /* @__PURE__ */ jsx(Banner, { tone: "info", children: /* @__PURE__ */ jsx("p", { children: t(locale, "setup.requestedBanner") }) }) : null,
     /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "400", children: [
       /* @__PURE__ */ jsx(Text, { as: "p", tone: "subdued", children: t(locale, "page.subtitle", { app: data.app }) }),
+      /* @__PURE__ */ jsxs(Text, { as: "p", tone: "subdued", children: [
+        t(locale, "page.emailPrefix"),
+        " ",
+        /* @__PURE__ */ jsx(Link, { url: `mailto:${SUPPORT_EMAIL}`, children: SUPPORT_EMAIL })
+      ] }),
       /* @__PURE__ */ jsx(Thread, { messages: data.messages, locale })
     ] }) }),
     /* @__PURE__ */ jsx(

@@ -10,6 +10,7 @@ declare const en: {
     "nav.messagesWithCount": string;
     "page.title": string;
     "page.subtitle": string;
+    "page.emailPrefix": string;
     "page.empty": string;
     "author.you": string;
     "author.admin": string;
