@@ -41,7 +41,7 @@ describe("createMessagesClient", () => {
     expect(() => createMessagesClient()).toThrow(TypeError);
   });
 
-  it("GETs the thread with bearer auth, default base URL and a timeout signal", async () => {
+  it("GETs the thread with bearer auth, default base URL and NO abort signal", async () => {
     const { calls } = mockFetch(() => jsonResponse(200, thread));
     const result = await createMessagesClient().getThread(SHOP);
     expect(calls).toHaveLength(1);
@@ -49,7 +49,8 @@ describe("createMessagesClient", () => {
     expect(call!.url).toBe(`http://127.0.0.1:3027/admin/api/v1/thread?shop=${encodeURIComponent(SHOP)}`);
     expect(call!.init.method).toBe("GET");
     expect((call!.init.headers as Record<string, string>).Authorization).toBe("Bearer test-key");
-    expect(call!.init.signal).toBeInstanceOf(AbortSignal);
+    // An AbortSignal on a fetch with a body crashes the process under Remix's web-fetch polyfill.
+    expect(call!.init.signal).toBeUndefined();
     expect(call!.init.redirect).toBe("error");
     expect(result.conversation).toEqual(thread.conversation);
     expect(result.messages).toHaveLength(2);
@@ -126,7 +127,7 @@ describe("createMessagesClient", () => {
   });
 
   it("uses an 8s timeout for postMessage and 3s for everything else", async () => {
-    const timeout = vi.spyOn(AbortSignal, "timeout");
+    const timeout = vi.spyOn(globalThis, "setTimeout");
     mockFetch((url) =>
       url.endsWith("/messages")
         ? jsonResponse(201, { conversation: thread.conversation, message: thread.messages[0] })
@@ -135,7 +136,7 @@ describe("createMessagesClient", () => {
     const client = createMessagesClient();
     await client.postMessage({ shop: SHOP, body: "x", merchantEmail: "a@b.co" });
     await client.getUnread(SHOP);
-    expect(timeout.mock.calls.map((c) => c[0])).toEqual([8000, 3000]);
+    expect(timeout.mock.calls.map((c) => c[1])).toEqual([8000, 3000]);
   });
 
   it("maps 4xx to MessagesRequestError with status and code", async () => {
@@ -170,18 +171,36 @@ describe("createMessagesClient", () => {
     });
     await expect(createMessagesClient().getThread(SHOP)).rejects.toBeInstanceOf(MessagesUnavailableError);
 
-    // Real timeout path: a fetch that only settles when its signal aborts.
-    mockFetch(
-      (_url, init) =>
-        new Promise<Response>((_resolve, reject) => {
-          init.signal?.addEventListener("abort", () => reject(init.signal?.reason));
-        }),
-    );
+    // Real timeout path: a fetch that never settles.
+    mockFetch(() => new Promise<Response>(() => {}));
     const started = Date.now();
     await expect(createMessagesClient({ timeoutMs: 50 }).getThread(SHOP)).rejects.toBeInstanceOf(
       MessagesUnavailableError,
     );
     expect(Date.now() - started).toBeLessThan(2000);
+  });
+
+  it("bounds reading the body too: headers arrive, body never ends", async () => {
+    mockFetch(
+      () =>
+        new Response(new ReadableStream({ start() {} }), { status: 200, headers: { "Content-Type": "application/json" } }),
+    );
+    const started = Date.now();
+    await expect(createMessagesClient({ timeoutMs: 50 }).getUnread(SHOP)).rejects.toBeInstanceOf(
+      MessagesUnavailableError,
+    );
+    expect(Date.now() - started).toBeLessThan(2000);
+  });
+
+  it("a fetch that rejects AFTER the deadline produces no unhandled rejection", async () => {
+    let rejectLate: (error: unknown) => void = () => {};
+    mockFetch(() => new Promise<Response>((_resolve, reject) => (rejectLate = reject)));
+    await expect(
+      createMessagesClient({ postTimeoutMs: 20 }).postMessage({ shop: SHOP, body: "x", merchantEmail: "a@b.co" }),
+    ).rejects.toBeInstanceOf(MessagesUnavailableError);
+    rejectLate(new TypeError("late failure"));
+    // Give the late rejection a few turns to surface (vitest fails the run on unhandled rejections).
+    await new Promise((resolve) => setTimeout(resolve, 20));
   });
 });
 
@@ -194,10 +213,10 @@ describe("unreadCountForShop", () => {
   });
 
   it("returns the count with a 1s timeout", async () => {
-    const timeout = vi.spyOn(AbortSignal, "timeout");
+    const timeout = vi.spyOn(globalThis, "setTimeout");
     mockFetch(() => jsonResponse(200, { unread: 2 }));
     expect(await unreadCountForShop(SHOP)).toBe(2);
-    expect(timeout).toHaveBeenCalledWith(1000);
+    expect(timeout).toHaveBeenCalledWith(expect.any(Function), 1000);
   });
 
   it("returns null on 4xx without tripping the breaker", async () => {
@@ -254,11 +273,11 @@ describe("threadSummaryForShop", () => {
     [{ id: "c", kind: "message", status: "open" }, false],
     [null, false],
   ])("conversation %j → setupOpen %s", async (conversation, setupOpen) => {
-    const timeout = vi.spyOn(AbortSignal, "timeout");
+    const timeout = vi.spyOn(globalThis, "setTimeout");
     const { calls } = mockFetch(() => jsonResponse(200, { conversation, messages: [], unread: 2 }));
     expect(await threadSummaryForShop(SHOP)).toEqual({ unread: 2, setupOpen });
     expect(calls[0]!.url).toContain("/admin/api/v1/thread?shop=");
-    expect(timeout).toHaveBeenCalledWith(1000);
+    expect(timeout).toHaveBeenCalledWith(expect.any(Function), 1000);
   });
 
   it("returns null on failure", async () => {

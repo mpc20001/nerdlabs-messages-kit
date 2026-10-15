@@ -1,6 +1,6 @@
 {
   "name": "@nerdlabs/messages-kit",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Drop-in in-app support chat (Nerd Labs Messages) for Nerd Labs Shopify Remix apps.",
   "license": "UNLICENSED",
   "private": true,
@@ -41,6 +41,7 @@
     "@remix-run/node": "^2.17.5",
     "@remix-run/react": "^2.17.5",
     "@remix-run/testing": "^2.17.5",
+    "@remix-run/web-fetch": "^4.4.2",
     "@shopify/polaris": "^12.27.0",
     "@types/node": "^22.20.5",
     "@types/react": "^18.3.31",
