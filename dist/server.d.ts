@@ -32,9 +32,9 @@ type MessagesClientOptions = {
     baseUrl?: string;
     /** Injected for tests; defaults to the global `fetch`. */
     fetch?: typeof fetch;
-    /** Per-request timeout in ms for reads/read-marks/deletes; defaults to 3000. */
+    /** Per-request timeout in ms (response headers AND body) for reads/read-marks/deletes; defaults to 3000. */
     timeoutMs?: number;
-    /** Timeout in ms for `postMessage`; defaults to 8000. */
+    /** Timeout in ms (response headers AND body) for `postMessage`; defaults to 8000. */
     postTimeoutMs?: number;
 };
 type MessagesClient = {

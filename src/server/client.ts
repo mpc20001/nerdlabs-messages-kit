@@ -47,9 +47,9 @@ export type MessagesClientOptions = {
   baseUrl?: string;
   /** Injected for tests; defaults to the global `fetch`. */
   fetch?: typeof fetch;
-  /** Per-request timeout in ms for reads/read-marks/deletes; defaults to 3000. */
+  /** Per-request timeout in ms (response headers AND body) for reads/read-marks/deletes; defaults to 3000. */
   timeoutMs?: number;
-  /** Timeout in ms for `postMessage`; defaults to 8000. */
+  /** Timeout in ms (response headers AND body) for `postMessage`; defaults to 8000. */
   postTimeoutMs?: number;
 };
 
@@ -119,6 +119,30 @@ function malformed(path: string): MessagesUnavailableError {
   return new MessagesUnavailableError(`Nerd Labs Messages returned an unexpected response for ${path}`);
 }
 
+/**
+ * Race `work` against a timer — deliberately WITHOUT AbortSignal.
+ *
+ * Consuming apps run under remix-serve, which installs Remix's web-fetch
+ * polyfill. Its abort path cancels an already-locked request BODY stream
+ * without awaiting it: the fetch rejects with AbortError (handled), but the
+ * cancel rejects with a TypeError nobody owns → unhandled rejection → Node
+ * exits → PM2 restart, dropping every in-flight request. Racing a timer leaves
+ * the losing request to finish on its own; Promise.race attaches a handler to
+ * the loser, so its later settlement can never surface as an unhandled
+ * rejection. (Same pattern as nerdlabs-shopify-starter `withDeadline`.)
+ */
+async function withDeadline<T>(work: Promise<T>, ms: number, onTimeout: () => Error): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(onTimeout()), ms);
+  });
+  try {
+    return await Promise.race([work, deadline]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export function createMessagesClient(options: MessagesClientOptions = {}): MessagesClient {
   const apiKey = options.apiKey ?? env("NERDLABS_MESSAGES_KEY");
   if (!apiKey) {
@@ -128,6 +152,36 @@ export function createMessagesClient(options: MessagesClientOptions = {}): Messa
   const doFetch = options.fetch ?? globalThis.fetch;
   const timeoutMs = options.timeoutMs ?? REQUEST_TIMEOUT_MS;
   const postTimeoutMs = options.postTimeoutMs ?? POST_TIMEOUT_MS;
+
+  /**
+   * fetch + read the full body. Never rejects with anything but
+   * MessagesUnavailableError. When the deadline wins, this keeps running
+   * unobserved and still drains the body, so the socket is released whenever
+   * the service eventually answers.
+   */
+  async function roundTrip(
+    url: string,
+    init: { method: string; headers: Record<string, string>; body: string | undefined },
+    method: string,
+    path: string,
+  ): Promise<{ response: Response; text: string; readFailed: boolean; readError?: unknown }> {
+    let response: Response;
+    try {
+      response = await doFetch(url, {
+        ...init,
+        // Never follow a redirect with the bearer key attached.
+        redirect: "error",
+      });
+    } catch (error) {
+      // Network failure, DNS, connection refused, redirect.
+      throw new MessagesUnavailableError(`Nerd Labs Messages unreachable (${method} ${path})`, { cause: error });
+    }
+    try {
+      return { response, text: await response.text(), readFailed: false };
+    } catch (readError) {
+      return { response, text: "", readFailed: true, readError };
+    }
+  }
 
   async function request(
     method: "GET" | "POST" | "DELETE",
@@ -142,25 +196,18 @@ export function createMessagesClient(options: MessagesClientOptions = {}): Messa
     };
     if (body !== undefined) headers["Content-Type"] = "application/json";
 
-    let response: Response;
-    try {
-      response = await doFetch(url, {
-        method,
-        headers,
-        body: body === undefined ? undefined : JSON.stringify(body),
-        signal: AbortSignal.timeout(timeout),
-        // Never follow a redirect with the bearer key attached.
-        redirect: "error",
-      });
-    } catch (error) {
-      // Network failure, DNS, connection refused, timeout (TimeoutError), redirect.
-      throw new MessagesUnavailableError(`Nerd Labs Messages unreachable (${method} ${path})`, { cause: error });
-    }
+    // The whole round-trip — headers AND body — is bounded by a raced timer,
+    // deliberately WITHOUT an AbortSignal (see `withDeadline`).
+    const { response, text, readFailed, readError } = await withDeadline(
+      roundTrip(url, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) }, method, path),
+      timeout,
+      () => new MessagesUnavailableError(`Nerd Labs Messages timed out after ${timeout}ms (${method} ${path})`),
+    );
 
     let payload: unknown = null;
     let parsed = false;
     try {
-      const text = await response.text();
+      if (readFailed) throw readError;
       if (text) {
         payload = JSON.parse(text);
         parsed = true;

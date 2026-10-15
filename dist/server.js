@@ -64,6 +64,17 @@ function toCount(value) {
 function malformed(path) {
   return new MessagesUnavailableError(`Nerd Labs Messages returned an unexpected response for ${path}`);
 }
+async function withDeadline(work, ms, onTimeout) {
+  let timer;
+  const deadline = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(onTimeout()), ms);
+  });
+  try {
+    return await Promise.race([work, deadline]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 function createMessagesClient(options = {}) {
   const apiKey = options.apiKey ?? env("NERDLABS_MESSAGES_KEY");
   if (!apiKey) {
@@ -73,6 +84,23 @@ function createMessagesClient(options = {}) {
   const doFetch = options.fetch ?? globalThis.fetch;
   const timeoutMs = options.timeoutMs ?? REQUEST_TIMEOUT_MS;
   const postTimeoutMs = options.postTimeoutMs ?? POST_TIMEOUT_MS;
+  async function roundTrip(url, init, method, path) {
+    let response;
+    try {
+      response = await doFetch(url, {
+        ...init,
+        // Never follow a redirect with the bearer key attached.
+        redirect: "error"
+      });
+    } catch (error) {
+      throw new MessagesUnavailableError(`Nerd Labs Messages unreachable (${method} ${path})`, { cause: error });
+    }
+    try {
+      return { response, text: await response.text(), readFailed: false };
+    } catch (readError) {
+      return { response, text: "", readFailed: true, readError };
+    }
+  }
   async function request(method, path, body, timeout = timeoutMs) {
     const url = `${baseUrl}${API_PREFIX}${path}`;
     const headers = {
@@ -80,23 +108,15 @@ function createMessagesClient(options = {}) {
       Accept: "application/json"
     };
     if (body !== void 0) headers["Content-Type"] = "application/json";
-    let response;
-    try {
-      response = await doFetch(url, {
-        method,
-        headers,
-        body: body === void 0 ? void 0 : JSON.stringify(body),
-        signal: AbortSignal.timeout(timeout),
-        // Never follow a redirect with the bearer key attached.
-        redirect: "error"
-      });
-    } catch (error) {
-      throw new MessagesUnavailableError(`Nerd Labs Messages unreachable (${method} ${path})`, { cause: error });
-    }
+    const { response, text, readFailed, readError } = await withDeadline(
+      roundTrip(url, { method, headers, body: body === void 0 ? void 0 : JSON.stringify(body) }, method, path),
+      timeout,
+      () => new MessagesUnavailableError(`Nerd Labs Messages timed out after ${timeout}ms (${method} ${path})`)
+    );
     let payload = null;
     let parsed = false;
     try {
-      const text = await response.text();
+      if (readFailed) throw readError;
       if (text) {
         payload = JSON.parse(text);
         parsed = true;
