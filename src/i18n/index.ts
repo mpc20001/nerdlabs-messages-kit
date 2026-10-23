@@ -1,11 +1,13 @@
 import { en, type Dictionary, type MessageKey } from "./en.js";
 import {
+  ar,
   cs,
   da,
   de,
   es,
   fi,
   fr,
+  he,
   it,
   ja,
   ko,
@@ -17,6 +19,7 @@ import {
   sv,
   th,
   tr,
+  ur,
   vi,
   zhCN,
   zhTW,
@@ -46,6 +49,11 @@ export const SUPPORTED_LOCALES = [
   "vi",
   "zh-CN",
   "zh-TW",
+  // Right-to-left. The Shopify admin has none of these three, so apps pick them
+  // from the merchant's own language choice or browser, not ?locale=.
+  "ar",
+  "he",
+  "ur",
 ] as const;
 
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
@@ -72,6 +80,9 @@ export const DICTIONARIES: Readonly<Record<SupportedLocale, Dictionary>> = {
   vi,
   "zh-CN": zhCN,
   "zh-TW": zhTW,
+  ar,
+  he,
+  ur,
 };
 
 /** Lower-cased exact tag → supported locale. */
@@ -91,6 +102,7 @@ const ALIASES: ReadonlyMap<string, SupportedLocale> = new Map([
   ["zh-sg", "zh-CN"],
   ["no", "nb"],
   ["nn", "nb"],
+  ["iw", "he"], // legacy Hebrew code, still sent by older Java/Android stacks
 ]);
 
 /** Bare language code → default regional variant. */
