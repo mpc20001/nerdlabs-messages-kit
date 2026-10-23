@@ -5,9 +5,9 @@ import { en } from "../src/i18n/en.js";
 const placeholders = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
 
 describe("dictionaries", () => {
-  it("covers exactly the 21 required locales", () => {
+  it("covers exactly the 24 required locales", () => {
     expect([...SUPPORTED_LOCALES].sort()).toEqual(
-      ["en", "cs", "da", "de", "es", "fi", "fr", "it", "ja", "ko", "nb", "nl", "pl", "pt-BR", "pt-PT", "sv", "th", "tr", "vi", "zh-CN", "zh-TW"].sort(),
+      ["en", "cs", "da", "de", "es", "fi", "fr", "it", "ja", "ko", "nb", "nl", "pl", "pt-BR", "pt-PT", "sv", "th", "tr", "vi", "zh-CN", "zh-TW", "ar", "he", "ur"].sort(),
     );
     expect(Object.keys(DICTIONARIES).sort()).toEqual([...SUPPORTED_LOCALES].sort());
   });
@@ -43,6 +43,12 @@ describe("resolveLocale", () => {
     ["zh-Hans", "zh-CN"],
     ["no", "nb"],
     ["nb-NO", "nb"],
+    ["ar", "ar"],
+    ["ar-SA", "ar"],
+    ["he-IL", "he"],
+    ["iw", "he"],
+    ["iw-IL", "he"],
+    ["ur-PK", "ur"],
     ["EN-us", "en"],
     ["xx", "en"],
     ["", "en"],

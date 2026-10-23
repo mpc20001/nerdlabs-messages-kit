@@ -11,10 +11,14 @@ with one shared admin inbox. It is the client side of the
   `@shopify/polaris ^12 || ^13`): `MessagesPage`,
   `FreeSetupCard`, `HelpLine`, plus `messagesNavLabel` and `t`.
 
-All strings are localized in 21 locales: en, cs, da, de, es, fi, fr, it, ja, ko,
-nb, nl, pl, pt-BR, pt-PT, sv, th, tr, vi, zh-CN, zh-TW. Fallback order: exact
+All strings are localized in 24 locales: en, cs, da, de, es, fi, fr, it, ja, ko,
+nb, nl, pl, pt-BR, pt-PT, sv, th, tr, vi, zh-CN, zh-TW, and the right-to-left
+ar, he, ur. The kit's components follow the page's `<html dir>` (Polaris flips on
+its own), so the app sets `dir="rtl"` for those. The Shopify admin never sends
+ar/he/ur in `?locale=`; an app reaches them only through its own language picker
+or the browser's Accept-Language. Fallback order: exact
 match, then known alias or language prefix (`pt` becomes `pt-BR`, `zh` becomes
-`zh-CN`, `zh-Hant`/`zh-HK` become `zh-TW`, `no` becomes `nb`), then `en`.
+`zh-CN`, `zh-Hant`/`zh-HK` become `zh-TW`, `no` becomes `nb`, `iw` becomes `he`), then `en`.
 
 **Per-app setup: see [INTEGRATION.md](./INTEGRATION.md).**
 

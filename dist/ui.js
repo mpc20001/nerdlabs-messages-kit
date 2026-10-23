@@ -92,7 +92,7 @@ function MessageBubble({ message, locale, now }) {
         padding: "300",
         borderRadius: "300",
         background: mine ? "bg-fill-info-secondary" : "bg-surface-secondary",
-        children: /* @__PURE__ */ jsx("div", { style: { whiteSpace: "pre-wrap", overflowWrap: "anywhere" }, children: /* @__PURE__ */ jsx(Text, { as: "p", variant: "bodyMd", children: message.body }) })
+        children: /* @__PURE__ */ jsx("div", { dir: "auto", style: { whiteSpace: "pre-wrap", overflowWrap: "anywhere" }, children: /* @__PURE__ */ jsx(Text, { as: "p", variant: "bodyMd", children: message.body }) })
       }
     )
   ] }) }) });

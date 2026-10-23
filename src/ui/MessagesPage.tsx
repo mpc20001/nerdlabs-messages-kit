@@ -78,7 +78,7 @@ function MessageBubble({ message, locale, now }: { message: Message; locale: str
             borderRadius="300"
             background={mine ? "bg-fill-info-secondary" : "bg-surface-secondary"}
           >
-            <div style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+            <div dir="auto" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
               <Text as="p" variant="bodyMd">
                 {message.body}
               </Text>

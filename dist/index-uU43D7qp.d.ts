@@ -110,7 +110,7 @@ type MessagesActionData = {
     error: MessageKey;
 };
 
-declare const SUPPORTED_LOCALES: readonly ["en", "cs", "da", "de", "es", "fi", "fr", "it", "ja", "ko", "nb", "nl", "pl", "pt-BR", "pt-PT", "sv", "th", "tr", "vi", "zh-CN", "zh-TW"];
+declare const SUPPORTED_LOCALES: readonly ["en", "cs", "da", "de", "es", "fi", "fr", "it", "ja", "ko", "nb", "nl", "pl", "pt-BR", "pt-PT", "sv", "th", "tr", "vi", "zh-CN", "zh-TW", "ar", "he", "ur"];
 type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 /**
  * Resolve any BCP-47-ish tag ("de", "de-AT", "pt_PT", "zh-Hant-HK", "EN-us")
